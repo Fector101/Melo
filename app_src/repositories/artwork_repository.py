@@ -8,6 +8,55 @@ from core.android_bridge import get_media_metadata_retriever
 
 logger = logging.getLogger("melo.artwork")
 
+# Thumbnail size for list items (40dp * 2 for density safety)
+_ART_THUMB_SIZE = 128
+
+
+def _downscale_artwork_android(data):
+    """Try to downscale artwork using Android Bitmap APIs."""
+    try:
+        from jnius import autoclass
+    except Exception:
+        return None
+
+    try:
+        ByteArrayInputStream = autoclass('java.io.ByteArrayInputStream')
+        BitmapFactory = autoclass('android.graphics.BitmapFactory')
+        Bitmap = autoclass('android.graphics.Bitmap')
+
+        # Decode original
+        byte_array = bytearray(data)
+        ByteBuffer = autoclass('java.nio.ByteBuffer')
+        buf = ByteBuffer.wrap(bytes(byte_array))
+        # Easier way: pass bytes differently
+        input_stream = ByteArrayInputStream(bytes(byte_array))
+        original = BitmapFactory.decodeStream(input_stream)
+        if original is None:
+            return None
+
+        width = original.getWidth()
+        height = original.getHeight()
+        if width <= _ART_THUMB_SIZE and height <= _ART_THUMB_SIZE:
+            original.recycle()
+            return None
+
+        scale = min(_ART_THUMB_SIZE / float(width), _ART_THUMB_SIZE / float(height))
+        new_w = int(width * scale)
+        new_h = int(height * scale)
+        scaled = Bitmap.createScaledBitmap(original, new_w, new_h, True)
+        original.recycle()
+
+        ByteArrayOutputStream = autoclass('java.io.ByteArrayOutputStream')
+        CompressFormat = autoclass('android.graphics.Bitmap$CompressFormat')
+        out = ByteArrayOutputStream()
+        scaled.compress(CompressFormat.JPEG, 85, out)
+        scaled.recycle()
+        result = bytes(out.toByteArray())
+        return result
+    except Exception as error:
+        logger.debug("android art downscale failed: %s", error)
+        return None
+
 
 class ArtworkRepository:
     """Cached access to the cover art of a track.
@@ -81,9 +130,15 @@ class ArtworkRepository:
                     art = retriever.getEmbeddedPicture()
                     if art:
                         data = bytes(art)
-                        target = stem + (".png"
-                                         if data[:8] == b"\x89PNG\r\n\x1a\n"
-                                         else ".jpg")
+                        # Try to downscale for smaller thumbnails
+                        downscaled = _downscale_artwork_android(data)
+                        if downscaled:
+                            data = downscaled
+                            target = stem + ".jpg"
+                        else:
+                            target = stem + (".png"
+                                             if data[:8] == b"\x89PNG\r\n\x1a\n"
+                                             else ".jpg")
                         with open(target, "wb") as handle:
                             handle.write(data)
                         result = target

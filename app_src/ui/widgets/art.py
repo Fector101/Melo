@@ -33,12 +33,21 @@ class Art(FloatLayout):
         rule, so it must not be wiped on every reload.
         """
         image = getattr(self, "_image", None)
-        if image is not None:
-            self.remove_widget(image)
-            self._image = None
         if self.source and os.path.exists(self.source):
-            self._image = Image(source=self.source, mipmap=True,
-                                fit_mode="cover",
-                                size_hint=(1, 1), pos_hint={"x": 0, "y": 0})
-            self.add_widget(self._image)
+            if image is None:
+                self._image = Image(
+                    source=self.source,
+                    mipmap=True,
+                    fit_mode="cover",
+                    size_hint=(1, 1),
+                    pos_hint={"x": 0, "y": 0},
+                )
+                self.add_widget(self._image)
+            else:
+                if image.source != self.source:
+                    image.source = self.source
+        else:
+            if image is not None:
+                self.remove_widget(image)
+                self._image = None
         self.art_loaded = self._image is not None

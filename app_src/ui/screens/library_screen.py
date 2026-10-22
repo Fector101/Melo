@@ -87,11 +87,25 @@ class LibraryScreen(FloatLayout):
 
     def _on_artwork_ready(self, _instance, path, art):
         """The cover of a track was extracted: show it in its row."""
+        target = None
         for row in self._rows:
             if row["path"] == path:
                 row["art"] = art
+                target = row
                 break
-        self.ids.songs.refresh_from_data()
+        if target is None:
+            return
+        rv = self.ids.songs
+        try:
+            adapter = getattr(rv, "view_adapter", None)
+            if adapter is not None and hasattr(adapter, "get_visible_view"):
+                for view in adapter.get_visible_view():
+                    if getattr(view, "path", None) == path:
+                        view.art = art
+                        return
+        except Exception:
+            pass
+        rv.refresh_from_data()
 
     def _on_row_selected(self, path):
         """A row was tapped: play that track."""
