@@ -19,7 +19,6 @@ from kivy.core.window import Window
 from kivy.utils import platform
 
 from android_notify import logger as android_notify_logger
-from android_notify.config import __version__
 from core.insets import attach_insets
 from repositories.artwork_repository import ArtworkRepository
 from repositories.library_repository import LibraryRepository
@@ -31,13 +30,12 @@ from ui.theme import BG
 from viewmodels.library_view_model import LibraryViewModel
 from viewmodels.player_view_model import PlayerViewModel
 
-print(f"version: {__version__}")
 android_notify_logger.setLevel(logging.DEBUG)
 logger = logging.getLogger("melo")
 
 if not logging.getLogger().handlers:
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
 

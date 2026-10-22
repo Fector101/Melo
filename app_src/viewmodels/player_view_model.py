@@ -9,6 +9,15 @@ import logging
 import threading
 
 from kivy.clock import Clock
+
+try:
+    from kivy.clock import mainthread
+except Exception:
+    def mainthread(func):
+        def wrapper(*args, **kwargs):
+            return func(*args, **kwargs)
+        return wrapper
+
 from kivy.event import EventDispatcher
 from kivy.properties import (BooleanProperty, NumericProperty, ObjectProperty,
                              StringProperty)
@@ -280,10 +289,15 @@ class PlayerViewModel(EventDispatcher):
         # while playing (an endless loop restarting / backend reset). Also
         # catch cases where the native completion did not fire yet.
         at_end = length > 1 and pos >= length - 0.15
-        rewound = dropped > 1.0
+        rewound = dropped > 1.0 and self._last_pos >= length - 1.0
         if at_end or rewound:
             logger.debug("ticker detected end: at_end=%s rewound=%s pos=%.2f "
                          "len=%.2f", at_end, rewound, pos, length)
+            if self.loop_enabled:
+                self._playback.seek(0)
+                self._reset_seek_ui()
+                self._playback.sync_notification()
+                return
             advanced = self._advance_audio_only()
             if advanced:
                 self._publish_now_playing()
@@ -295,7 +309,12 @@ class PlayerViewModel(EventDispatcher):
         """The engine stopped on its own: the track is over."""
         logger.info("track end callback from native stop")
         if self.loop_enabled:
-            logger.debug("loop enabled, not advancing")
+            logger.debug("loop enabled, restarting track")
+            self._playback.play()
+            self.is_playing = True
+            self._playback.seek(0)
+            # self._reset_seek_ui() # not on main thread, app still updates when opened
+            self._playback.sync_notification() # does not need to be on main thread
             return  # the sound loops naturally; don't advance
         advanced = self._advance_audio_only()
         if advanced:

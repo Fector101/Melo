@@ -177,7 +177,7 @@ class KivySoundController:
     def loop(self, value):
         self._loop = bool(value)
         if self._sound is not None:
-            self._sound.loop = self._loop
+            self._sound.loop = False  # app-managed looping so completion fires
 
     def play(self):
         if self._sound is None:
