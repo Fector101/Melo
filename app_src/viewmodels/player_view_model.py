@@ -10,14 +10,6 @@ import threading
 
 from kivy.clock import Clock
 
-try:
-    from kivy.clock import mainthread
-except Exception:
-    def mainthread(func):
-        def wrapper(*args, **kwargs):
-            return func(*args, **kwargs)
-        return wrapper
-
 from kivy.event import EventDispatcher
 from kivy.properties import (BooleanProperty, NumericProperty, ObjectProperty,
                              StringProperty)
@@ -69,8 +61,9 @@ class PlayerViewModel(EventDispatcher):
         self.bind(current_track=self._on_current_track)
         self._library.bind(tracks=self._on_tracks_changed)
         self._playback.set_on_track_end(self._on_track_end)
-        self._playback.set_transport_callbacks(on_next=self.next_track,
-                                              on_previous=self.previous_track)
+        self._playback.set_transport_callbacks(
+            on_next=self._on_notification_next,
+            on_previous=self._on_notification_previous)
 
     # ------------------------------------------------------------------ #
     # Lifecycle                                                           #
@@ -134,13 +127,32 @@ class PlayerViewModel(EventDispatcher):
         if not tracks:
             return
         # If we're >3s into the current track, restart it instead.
-        if self._playback.has_controller and \
-                self._playback.get_position() > RESTART_AFTER:
+        if self._playback.has_controller and self._playback.get_position() > RESTART_AFTER:
             self.seek(0)
             return
         if self._index > 0:
             self._index -= 1
             self._load_current()
+
+    def _on_notification_next(self, *_args):
+        if self._advance_audio_only():
+            self._publish_now_playing()
+            Clock.schedule_once(lambda dt: self._refresh_for_current())
+
+    def _on_notification_previous(self, *_args):
+        tracks = self._library.tracks
+        if not tracks:
+            return
+        if (self._playback.has_controller and self._playback.get_position() > RESTART_AFTER):
+            self._playback.seek(0)
+            self._playback.sync_notification()
+            Clock.schedule_once(lambda dt: self._reset_seek_ui())
+            return
+        if self._index > 0:
+            self._index -= 1
+            if self._play_current_audio_only():
+                self._publish_now_playing()
+                Clock.schedule_once(lambda dt: self._refresh_for_current())
 
     def toggle_loop(self):
         """Repeat the current track."""
@@ -155,7 +167,7 @@ class PlayerViewModel(EventDispatcher):
         target = float(max(0.0, seconds))
         self._pending_seek = target
         self._last_pos = target
-        self.position = target
+        self._safe_set_position(target)# self.position = target
         self._playback.seek(target)
         logger.info("seek %.1fs", target)
         self._playback.sync_notification()
@@ -254,6 +266,11 @@ class PlayerViewModel(EventDispatcher):
         if track is not None and track.path == path:
             self.art = art
 
+    def _safe_set_position(self, target_position):
+        # Safe fallback once Kivy's loop wakes back up
+        Clock.schedule_once(lambda dt: setattr(self, "position", target_position))
+
+
     # ------------------------------------------------------------------ #
     # Ticker: progress + completion detection (no on_complete event)      #
     # ------------------------------------------------------------------ #
@@ -334,7 +351,13 @@ class PlayerViewModel(EventDispatcher):
         if not tracks or self._index + 1 >= len(tracks):
             return False
         self._index += 1
-        track = tracks[self._index]
+        return self._play_current_audio_only()
+
+    def _play_current_audio_only(self):
+        """Load and play the indexed track without touching observable state."""
+        track = self._current()
+        if track is None:
+            return False
         if not self._playback.load(track.path):
             logger.error("failed to load track: %s", track.path)
             return False

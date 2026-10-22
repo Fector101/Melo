@@ -1,6 +1,7 @@
 """The player view model: the transport commands and the progress ticker."""
 
 import pytest
+from kivy.clock import Clock
 
 from models.track import Track
 from viewmodels.player_view_model import PlayerViewModel
@@ -79,6 +80,57 @@ def test_next_and_previous_track(player, playback, tracks):
     assert playback.loaded == "/music/0.mp3"
 
 
+def test_notification_next_and_previous_play_audio_before_ui_refresh(
+        player, playback, tracks, monkeypatch):
+    scheduled = []
+    monkeypatch.setattr(
+        Clock, "schedule_once",
+        lambda callback, timeout=0: scheduled.append((callback, timeout)))
+    player.play_track(tracks[0])
+
+    playback.on_next()
+
+    assert playback.loaded == "/music/1.mp3"
+    assert player.current_track is tracks[0]
+    assert len(scheduled) == 1
+    callback, timeout = scheduled.pop()
+    assert timeout == 0
+    callback(0)
+    assert playback.loaded == "/music/1.mp3"
+    assert player.current_track is tracks[1]
+
+    playback.on_previous()
+
+    assert playback.loaded == "/music/0.mp3"
+    assert player.current_track is tracks[1]
+    assert len(scheduled) == 1
+    callback, timeout = scheduled.pop()
+    assert timeout == 0
+    callback(0)
+    assert playback.loaded == "/music/0.mp3"
+    assert player.current_track is tracks[0]
+
+
+def test_notification_previous_restarts_audio_before_ui_refresh(
+        player, playback, tracks, monkeypatch):
+    scheduled = []
+    monkeypatch.setattr(
+        Clock, "schedule_once",
+        lambda callback, timeout=0: scheduled.append(callback))
+    player.play_track(tracks[1])
+    playback.position = 10.0
+    player.position = 10.0
+
+    playback.on_previous()
+
+    assert playback.loaded == "/music/1.mp3"
+    assert playback.position == 0.0
+    assert player.position == 10.0
+    assert len(scheduled) == 1
+    scheduled.pop()(0)
+    assert player.position == 0.0
+
+
 def test_previous_restarts_the_track_after_three_seconds(player, playback,
                                                          tracks):
     player.play_track(tracks[1])
@@ -90,7 +142,7 @@ def test_previous_restarts_the_track_after_three_seconds(player, playback,
     assert playback.position == 0.0
 
 
-def test_seek_moves_the_position(player, playback, tracks):
+def test_seek_moves_the_position(player, playback, tracks, immediate_clock):
     player.play_track(tracks[0])
 
     player.seek(42.0)
