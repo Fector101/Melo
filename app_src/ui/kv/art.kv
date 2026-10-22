@@ -1,0 +1,35 @@
+#:import dp kivy.metrics.dp
+#:import THEME ui.theme
+
+<Art>:
+    size_hint: None, None
+    size: dp(40), dp(40)
+    canvas.before:
+        # Clip everything the widget draws (the tile + cover Image child) to a
+        # rounded rect, so real art gets the same rounded corners.
+        StencilPush
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(6)]
+        StencilUse
+        Color:
+            rgba: self.bg
+        Rectangle:
+            pos: self.pos
+            size: self.size
+    canvas.after:
+        StencilUnUse
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(6)]
+        StencilPop
+    Icon:
+        id: glyph
+        kind: "note"
+        size: dp(20), dp(20)
+        center: root.center
+        color: THEME.FG_GLYPH
+        # The cover Image, when there is one, hides the fallback note.
+        opacity: 0 if root.art_loaded else 1

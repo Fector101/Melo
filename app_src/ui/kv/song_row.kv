@@ -1,0 +1,38 @@
+#:import dp kivy.metrics.dp
+
+<SongRow>:
+    size_hint_y: None
+    height: dp(70)
+    padding: dp(15), dp(10), dp(15), dp(10)
+    spacing: dp(16)
+    Art:
+        id: art
+        pos_hint: {"center_y": .5}
+        source: root.art
+    BoxLayout:
+        orientation: "vertical"
+        padding: 0, dp(4)
+        Label:
+            text: root.title
+            font_size: "15sp"
+            color: root.fg
+            halign: "left"
+            valign: "bottom"
+            text_size: self.size
+            shorten: True
+            shorten_from: "right"
+        Label:
+            text: root.artist
+            font_size: "13sp"
+            color: root.fg_dim
+            halign: "left"
+            valign: "top"
+            text_size: self.size
+            shorten: True
+            shorten_from: "right"
+    Label:
+        text: root.duration
+        font_size: "12sp"
+        color: root.fg_dim
+        size_hint_x: None
+        width: dp(52)
