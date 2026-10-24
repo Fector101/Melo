@@ -40,8 +40,10 @@ class LibraryRepository:
             duration_idx = cursor.getColumnIndex("duration")
             data_idx = cursor.getColumnIndex("_data")
             while cursor.moveToNext():
-                path = cursor.getString(data_idx)
-                if not path:
+                try:
+                    path = cursor.getString(data_idx)
+                except Exception as error:
+                    logger.warning("scan: could not get path for track, skipping. Error: %s", error)
                     continue
                 tracks.append(Track(
                     path=path,
