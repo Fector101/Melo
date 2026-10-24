@@ -8,8 +8,7 @@ Why Kivy's own ``SoundLoader``:
 
 - It plays *file paths* only, so tracks are resolved from MediaStore
   ``_data`` instead of ``content://`` URIs. ``_data`` is filtered on Android
-  10+ unless the app holds All Files Access, so this scan is really aimed at
-  older Android or testing.
+  10+ unless the app holds All Files Access, The scan is tested on Android 15 so it's also safe for newer versions.
 - There is no ``on_complete`` event, so auto-advance is guessed from the
   position in the app-side ticker (``get_pos()`` at the track length, or a
   rewind while playing).
@@ -18,6 +17,7 @@ Why Kivy's own ``SoundLoader``:
 import logging
 
 from android_notify.config import on_android_platform
+from android_notify.media import MediaNotification
 from core.android_bridge import run_on_ui_thread
 
 logger = logging.getLogger("melo.playback")
@@ -27,11 +27,6 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - older Kivy
     from kivy.core.audio import SoundLoader as KivySoundLoader
 
-try:
-    from android_notify.media import MediaNotification
-except Exception as error:  # pragma: no cover - depends on the installed lib
-    MediaNotification = None
-    logger.warning("no media notification support: %s", error)
 
 
 def _load_kivy_sound(path):
@@ -68,8 +63,7 @@ def _keep_cpu_awake(sound):
         from core.android_bridge import autoclass
 
         power = autoclass("android.os.PowerManager")
-        player.setWakeMode(
-            get_python_activity_context(), power.PARTIAL_WAKE_LOCK)
+        player.setWakeMode(get_python_activity_context(), power.PARTIAL_WAKE_LOCK)
     except Exception as error:
         logger.debug("setWakeMode unavailable: %s", error)
 
@@ -113,10 +107,10 @@ class KivySoundController:
             _keep_cpu_awake(self._sound)
         self._user_stopped = False
         return self._sound is not None
-
+    
     def _on_sound_stopped(self, *args):
-        logger.debug("sound stopped: user_stopped=%s, has_cb=%s",
-                     self._user_stopped, self._on_track_end is not None)
+        # i'm using on_stop as completion because kivy fires .stop when sound finsihes playing
+        logger.debug("sound stopped: user_stopped=%s, has_cb=%s", self._user_stopped, self._on_track_end is not None)
         if self._user_stopped:
             return
         cb = self._on_track_end
@@ -154,6 +148,17 @@ class KivySoundController:
         self._playing = False
         self._paused = False
 
+    # I'm using on_stop to seek back to 0 because when using kkivy loop,there's no where to know when the track finished playing.
+    @property
+    def loop(self):
+        return self._loop
+
+    @loop.setter
+    def loop(self, value):
+        self._loop = bool(value)
+        if self._sound is not None:
+            self._sound.loop = False  # app-managed looping so completion fires
+
     # --- IMediaController contract -----------------------------------------
     @property
     def source(self):
@@ -168,16 +173,6 @@ class KivySoundController:
         if self._paused:
             return "pause"
         return "play" if self._playing else "stop"
-
-    @property
-    def loop(self):
-        return self._loop
-
-    @loop.setter
-    def loop(self, value):
-        self._loop = bool(value)
-        if self._sound is not None:
-            self._sound.loop = False  # app-managed looping so completion fires
 
     def play(self):
         if self._sound is None:
@@ -334,10 +329,7 @@ class PlaybackRepository:
     def sync_notification(self):
         """Push the current playback state into the notification."""
         if self._notification is not None:
-            try:
-                self._notification.syncPlaybackState()
-            except Exception as error:
-                logger.debug("could not sync the notification: %s", error)
+            self._notification.syncPlaybackState()
 
     def release(self):
         """Stop the playback and tear the notification down."""

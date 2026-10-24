@@ -1,6 +1,6 @@
 """The domain model: what a track is.
 
-Plain data, no Kivy and no Android, so every layer above can rely on it.
+Plain data, no Kivy and no Android, so every process above can rely on it.
 """
 
 import os

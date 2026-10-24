@@ -48,15 +48,10 @@ python3 -m pytest tests/ -q          # the test suite
 python3 -m compileall -q app_src     # syntax check
 ```
 
-`python3` on `PATH` is the Waller venv, which carries Kivy 3.0.0.dev0 as an
-editable install of the vendored sources in
-`/home/fabian/Documents/python-android/app_src/kivy`. Melo has no venv of
-its own and does not need one.
+Melo uses kivy 3.0.0.dev0 for audio feature to work properly, I'm currently reusing the Waller env for development which carries editable install of the vendored sources in
+`/home/fabian/Documents/python-android/app_src/kivy`. If you encounter issues with the Kivy import, ensure that the editable install is correctly set up.
 
-If `import kivy` fails with `ModuleNotFoundError`, the editable install in
-that venv points at a folder that does not hold the vendored sources any
-more. Put the folder that contains the vendored `kivy/` package on the path
-yourself:
+If `import kivy` fails with `ModuleNotFoundError`, the point to the kivy installed environment which contains yours
 
 ```shell
 PYTHONPATH=/home/fabian/Documents/python-android/app_src python3 -m pytest tests/ -q
@@ -68,8 +63,7 @@ PYTHONPATH=/home/fabian/Documents/python-android/app_src python3 -m pytest tests
 buildozer android debug
 ```
 
-The APK lands in `bin/melo-0.0.1-<arch>-debug.apk`. Build it yourself when
-you need a new build; an agent should not run it without being asked.
+The APK lands in `bin/melo-0.0.1-<arch>-debug.apk`.
 
 What the build does:
 
@@ -119,7 +113,7 @@ The rules, in one sentence each:
   know nothing about widgets.
 - **`repositories/` never import `ui/`.** They are the only layer that talks
   to Android (MediaStore, the JVM, the audio engine).
-- **`models/` is pure data.** No Kivy, no Android - so every layer can rely
+- **`models/` is pure data.** No Kivy, no Android - so process layer can rely
   on it.
 - **`main.py` is the only file that knows all the layers.** It builds the
   repositories, the view models and the screen, and hands them to each other.

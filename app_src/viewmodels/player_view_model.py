@@ -44,24 +44,25 @@ class PlayerViewModel(EventDispatcher):
     #: Whether the user is dragging the seek bar (the ticker keeps quiet).
     is_seeking = BooleanProperty(False)
 
-    def __init__(self, playback, library, artwork, **kwargs):
+    def __init__(self, playback_repository, library_viewmodel, artwork_repository, **kwargs):
         """
         :param playback: the :class:`PlaybackRepository` to play through.
         :param library: the :class:`LibraryViewModel` with the playlist.
         :param artwork: the :class:`ArtworkRepository` for the cover.
         """
         super().__init__(**kwargs)
-        self._playback = playback
-        self._library = library
-        self._artwork = artwork
+        self._playback_repository = playback_repository
+        self._library_viewmodel = library_viewmodel
+        self._artwork_repository = artwork_repository
         self._index = -1
         self._tick = None
         self._pending_seek = None
         self._last_pos = 0.0
+        
         self.bind(current_track=self._on_current_track)
-        self._library.bind(tracks=self._on_tracks_changed)
-        self._playback.set_on_track_end(self._on_track_end)
-        self._playback.set_transport_callbacks(
+        self._library_viewmodel.bind(tracks=self._on_tracks_changed)
+        self._playback_repository.set_on_track_end(self._on_track_end)
+        self._playback_repository.set_transport_callbacks(
             on_next=self._on_notification_next,
             on_previous=self._on_notification_previous)
 
@@ -92,28 +93,28 @@ class PlayerViewModel(EventDispatcher):
 
     def toggle_play_pause(self):
         """Start or pause the playback."""
-        if not self._playback.has_controller:
+        if not self._playback_repository.has_controller:
             # Nothing loaded yet - play the first track if we have any.
-            tracks = self._library.tracks
+            tracks = self._library_viewmodel.tracks
             if tracks and self._index < 0:
                 self._index = 0
                 self._load_current()
             return
-        if self._playback.source is None:
+        if self._playback_repository.source is None:
             return
-        if self._playback.is_playing:
-            self._playback.pause()
+        if self._playback_repository.is_playing:
+            self._playback_repository.pause()
             logger.info("pause")
         else:
-            self._playback.play()
+            self._playback_repository.play()
             logger.info("play")
-        self.is_playing = self._playback.is_playing
-        self._last_pos = self._playback.get_position()
-        self._playback.sync_notification()
+        self.is_playing = self._playback_repository.is_playing
+        self._last_pos = self._playback_repository.get_position()
+        self._playback_repository.sync_notification()
 
     def next_track(self):
         """Play the next track of the list."""
-        tracks = self._library.tracks
+        tracks = self._library_viewmodel.tracks
         if not tracks:
             return
         if self._index + 1 < len(tracks):
@@ -123,11 +124,11 @@ class PlayerViewModel(EventDispatcher):
 
     def previous_track(self):
         """Play the previous track - or restart the current one."""
-        tracks = self._library.tracks
+        tracks = self._library_viewmodel.tracks
         if not tracks:
             return
         # If we're >3s into the current track, restart it instead.
-        if self._playback.has_controller and self._playback.get_position() > RESTART_AFTER:
+        if self._playback_repository.has_controller and self._playback_repository.get_position() > RESTART_AFTER:
             self.seek(0)
             return
         if self._index > 0:
@@ -140,12 +141,12 @@ class PlayerViewModel(EventDispatcher):
             Clock.schedule_once(lambda dt: self._refresh_for_current())
 
     def _on_notification_previous(self, *_args):
-        tracks = self._library.tracks
+        tracks = self._library_viewmodel.tracks
         if not tracks:
             return
-        if (self._playback.has_controller and self._playback.get_position() > RESTART_AFTER):
-            self._playback.seek(0)
-            self._playback.sync_notification()
+        if (self._playback_repository.has_controller and self._playback_repository.get_position() > RESTART_AFTER):
+            self._playback_repository.seek(0)
+            self._playback_repository.sync_notification()
             Clock.schedule_once(lambda dt: self._reset_seek_ui())
             return
         if self._index > 0:
@@ -157,20 +158,20 @@ class PlayerViewModel(EventDispatcher):
     def toggle_loop(self):
         """Repeat the current track."""
         self.loop_enabled = not self.loop_enabled
-        self._playback.set_loop(self.loop_enabled)
+        self._playback_repository.set_loop(self.loop_enabled)
         logger.info("loop -> %s", self.loop_enabled)
 
     def seek(self, seconds):
         """Jump to ``seconds`` of the loaded track."""
-        if not self._playback.has_controller or self._playback.source is None:
+        if not self._playback_repository.has_controller or self._playback_repository.source is None:
             return
         target = float(max(0.0, seconds))
         self._pending_seek = target
         self._last_pos = target
         self._safe_set_position(target)# self.position = target
-        self._playback.seek(target)
+        self._playback_repository.seek(target)
         logger.info("seek %.1fs", target)
-        self._playback.sync_notification()
+        self._playback_repository.sync_notification()
 
     def set_seeking(self, seeking):
         """Called while the user drags the seek bar."""
@@ -181,13 +182,13 @@ class PlayerViewModel(EventDispatcher):
     # ------------------------------------------------------------------ #
     def _current(self):
         """The track that should be playing (None when there is none)."""
-        tracks = self._library.tracks
+        tracks = self._library_viewmodel.tracks
         if 0 <= self._index < len(tracks):
             return tracks[self._index]
         return None
 
     def _index_of(self, track):
-        for index, candidate in enumerate(self._library.tracks):
+        for index, candidate in enumerate(self._library_viewmodel.tracks):
             if candidate.path == track.path:
                 return index
         return None
@@ -197,13 +198,13 @@ class PlayerViewModel(EventDispatcher):
         track = self._current()
         if track is None:
             return
-        if not self._playback.load(track.path):
+        if not self._playback_repository.load(track.path):
             logger.error("failed to load track: %s", track.path)
-            self._library.set_status(f"Failed to load: {track.display_title}")
+            self._library_viewmodel.set_status(f"Failed to load: {track.display_title}")
             return
-        self._playback.set_loop(self.loop_enabled)
+        self._playback_repository.set_loop(self.loop_enabled)
         logger.info("now playing: %s (%s)", track.display_title, track.path)
-        self._playback.play()
+        self._playback_repository.play()
         self._publish_now_playing()
         self._refresh_for_current()
 
@@ -212,7 +213,7 @@ class PlayerViewModel(EventDispatcher):
         track = self._current()
         if track is None:
             return
-        self._playback.set_now_playing(track.display_title,
+        self._playback_repository.set_now_playing(track.display_title,
                                        track.display_artist)
 
     def _refresh_for_current(self):
@@ -225,9 +226,9 @@ class PlayerViewModel(EventDispatcher):
         self.position = 0.0
         self._pending_seek = None
         self._last_pos = 0.0
-        self._library.set_status(
-            f"Track {self._index + 1} / {len(self._library.tracks)}")
-        self.is_playing = self._playback.is_playing
+        self._library_viewmodel.set_status(
+            f"Track {self._index + 1} / {len(self._library_viewmodel.tracks)}")
+        self.is_playing = self._playback_repository.is_playing
 
     def _on_current_track(self, _instance, track):
         """The loaded track changed: show its title, artist and cover."""
@@ -246,12 +247,12 @@ class PlayerViewModel(EventDispatcher):
 
     def _art_for(self, path):
         """The cover of ``path`` when it is cached, else it is loaded async."""
-        art = self._artwork.cached(path)
+        art = self._artwork_repository.cached(path)
         if art:
             return art
 
         def worker():
-            found = self._artwork.extract(path)
+            found = self._artwork_repository.extract(path)
             if found:
                 Clock.schedule_once(lambda *_: self._set_player_art(path,
                                                                      found))
@@ -275,14 +276,14 @@ class PlayerViewModel(EventDispatcher):
     # Ticker: progress + completion detection (no on_complete event)      #
     # ------------------------------------------------------------------ #
     def _on_tick(self, _dt):
-        if not self._playback.has_controller:
+        if not self._playback_repository.has_controller:
             return
 
-        length = self._playback.get_length()
+        length = self._playback_repository.get_length()
         if length > 0:
             self.duration = length
 
-        pos = self._playback.get_position()
+        pos = self._playback_repository.get_position()
         dropped = self._last_pos - pos
         self._last_pos = pos
 
@@ -291,15 +292,15 @@ class PlayerViewModel(EventDispatcher):
                 self._pending_seek = None
             else:
                 self.position = self._pending_seek
-                self.is_playing = self._playback.is_playing
+                self.is_playing = self._playback_repository.is_playing
                 return
 
         if not self.is_seeking:
             self.position = min(pos, self.duration) \
                 if self.duration > 0 else pos
-        self.is_playing = self._playback.is_playing
+        self.is_playing = self._playback_repository.is_playing
 
-        if not self._playback.is_playing:
+        if not self._playback_repository.is_playing:
             return
 
         # Guess completion from the position: sitting at the end, or a rewind
@@ -311,9 +312,9 @@ class PlayerViewModel(EventDispatcher):
             logger.debug("ticker detected end: at_end=%s rewound=%s pos=%.2f "
                          "len=%.2f", at_end, rewound, pos, length)
             if self.loop_enabled:
-                self._playback.seek(0)
+                self._playback_repository.seek(0)
                 self._reset_seek_ui()
-                self._playback.sync_notification()
+                self._playback_repository.sync_notification()
                 return
             advanced = self._advance_audio_only()
             if advanced:
@@ -327,11 +328,11 @@ class PlayerViewModel(EventDispatcher):
         logger.info("track end callback from native stop")
         if self.loop_enabled:
             logger.debug("loop enabled, restarting track")
-            self._playback.play()
+            self._playback_repository.play()
             self.is_playing = True
-            self._playback.seek(0)
+            self._playback_repository.seek(0)
             # self._reset_seek_ui() # not on main thread, app still updates when opened
-            self._playback.sync_notification() # does not need to be on main thread
+            self._playback_repository.sync_notification() # does not need to be on main thread
             return  # the sound loops naturally; don't advance
         advanced = self._advance_audio_only()
         if advanced:
@@ -339,15 +340,15 @@ class PlayerViewModel(EventDispatcher):
             Clock.schedule_once(lambda dt: self._refresh_for_current())
             return
         # end of the playlist
-        self._playback.seek(0)
-        self._playback.pause()
+        self._playback_repository.seek(0)
+        self._playback_repository.pause()
         self.is_playing = False
         self._reset_seek_ui()
-        self._playback.sync_notification()
+        self._playback_repository.sync_notification()
 
     def _advance_audio_only(self):
         """Load and play the next track, without touching the view state."""
-        tracks = self._library.tracks
+        tracks = self._library_viewmodel.tracks
         if not tracks or self._index + 1 >= len(tracks):
             return False
         self._index += 1
@@ -358,31 +359,31 @@ class PlayerViewModel(EventDispatcher):
         track = self._current()
         if track is None:
             return False
-        if not self._playback.load(track.path):
+        if not self._playback_repository.load(track.path):
             logger.error("failed to load track: %s", track.path)
             return False
-        self._playback.set_loop(self.loop_enabled)
-        self._playback.play()
+        self._playback_repository.set_loop(self.loop_enabled)
+        self._playback_repository.play()
         return True
 
     def _track_finished(self):
         """Reached the end of a track: loop, advance, or stop."""
         if self.loop_enabled:
             # The sound loops itself; snap the UI back and resync.
-            self._playback.seek(0)
+            self._playback_repository.seek(0)
             self._reset_seek_ui()
-            self._playback.sync_notification()
+            self._playback_repository.sync_notification()
             return
 
-        if self._index + 1 < len(self._library.tracks):
+        if self._index + 1 < len(self._library_viewmodel.tracks):
             self.next_track()
             return
         # "Play once": stop at the beginning of the last track.
-        self._playback.seek(0)
-        self._playback.pause()
+        self._playback_repository.seek(0)
+        self._playback_repository.pause()
         self.is_playing = False
         self._reset_seek_ui()
-        self._playback.sync_notification()
+        self._playback_repository.sync_notification()
 
     def _reset_seek_ui(self):
         self._pending_seek = None

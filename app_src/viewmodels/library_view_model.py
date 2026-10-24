@@ -28,16 +28,16 @@ class LibraryViewModel(EventDispatcher):
     #: Whether a scan is running right now.
     is_scanning = BooleanProperty(False)
 
-    def __init__(self, library, artwork, permissions, **kwargs):
+    def __init__(self, library_repository, artwork_repository, permissions_repository, **kwargs):
         """
         :param library: the :class:`LibraryRepository` to scan with.
         :param artwork: the :class:`ArtworkRepository` to read the covers from.
         :param permissions: the :class:`PermissionsRepository` to ask with.
         """
         super().__init__(**kwargs)
-        self._library = library
-        self._artwork = artwork
-        self._permissions = permissions
+        self._library = library_repository
+        self._artwork = artwork_repository
+        self._permissions = permissions_repository
         self._scan_in_progress = False
         self._art_generation = 0  # bumped to abandon an outdated art worker
         self.register_event_type("on_artwork_ready")
@@ -153,3 +153,11 @@ class LibraryViewModel(EventDispatcher):
 
     def on_artwork_ready(self, *_args, **_kwargs):
         """The default handler of the event; the view binds to it."""
+
+
+
+# How it works step by step
+# Tag each load with a version - When load_artwork() is called, it does self._art_generation += 1 and saves that number into a local variable generation. That generation is "owned" by this specific call and captured by the worker thread.
+# New loads invalidate old ones - If load_artwork() is called again before the first worker finishes, _art_generation increases again. The first worker still has its old generation value, while the current value is now higher.
+# Old workers bail out cooperatively - The old worker keeps checking if generation != self._art_generation: return. As soon as it notices the numbers don't match (meaning a newer load happened), it stops. It won't process any more tracks, so it saves time extracting art for a library that is no longer being displayed. 
+# Results get double-checked - Even if an old worker already extracted some art and scheduled a callback to the UI, that callback also passes its generation. _on_artwork_ready() checks again on the main thread and ignores it if it's stale. This prevents old covers from popping in after the library has already been replaced.

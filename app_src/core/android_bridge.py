@@ -50,6 +50,9 @@ else:
 
 
 _retriever_class = None
+# using _retriever_loaded var beat this issues
+# - "has it been loaded yet" and "did MediaMetadataRetriever try to load and failed".
+# so as not to try multiple times needlessly
 _retriever_loaded = False
 
 
