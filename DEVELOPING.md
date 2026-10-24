@@ -1,7 +1,7 @@
 # Developing Melo
 
 Melo is a lightweight music player for Android, written in pure Kivy.
-It displays all the device for audio files in your devices and plays them with a media notification.
+It displays all the audio files in your device and plays them with a media notification.
 
 
 This document is the map of the codebase: i put this together to make development process easier
