@@ -40,7 +40,7 @@ if not logging.getLogger().handlers:
     )
 
 if platform not in ("android", "ios"):
-    Window.size = (400, 860)
+    Window.size = (390, 740)
 
 
 class MeloApp(App):
@@ -69,8 +69,7 @@ class MeloApp(App):
         )
 
         # --- the view ---------------------------------------------------
-        self.root_ui = LibraryScreen(self.library_view_model,
-                                     self.player_view_model)
+        self.root_ui = LibraryScreen(self.library_view_model, self.player_view_model)
         self.player_view_model.start()
         self.library_view_model.set_status("Starting...")
 
@@ -78,11 +77,14 @@ class MeloApp(App):
         # Android).
         attach_insets(self.root_ui)
 
-        # The first scan needs the audio permission, so it waits a moment for
-        # the activity to be up.
-        Clock.schedule_once(self._start, 2)
+        # Avoiding black after splash screen so waiting a bit before scan.
+        Clock.schedule_once(self.weird_clock_issue,1)
         return self.root_ui
 
+    def weird_clock_issue(self, dt):
+        # Clock fired immediately reaching shedule line, so schedule again after that.
+        Clock.schedule_once(self._start, 1)
+        
     @mainthread
     def _start(self, _dt):
         logger.info("starting: request audio permission")
