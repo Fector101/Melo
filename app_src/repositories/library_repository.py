@@ -20,7 +20,7 @@ class LibraryRepository:
     def scan(self):
         """Every audio track of the device, sorted by title."""
         if not on_android_platform():
-            return []
+            return []#self.desktop_scan()
 
         context = get_python_activity_context()
         if not context:
@@ -54,3 +54,27 @@ class LibraryRepository:
         tracks.sort(key=lambda track: track.display_title.lower())
         logger.info("scan complete: %d track(s)", len(tracks))
         return tracks
+
+    # def desktop_scan(self):
+    #     """Scan for audio files in the user's music directory.
+
+    #     This is a fallback for desktop platforms that don't have MediaStore.
+    #     """
+    #     import os
+    #     from pathlib import Path
+
+    #     music_dir = Path.home() / "Music"
+    #     if not music_dir.exists():
+    #         logger.warning("desktop_scan: Music directory does not exist")
+    #         return []
+
+    #     tracks = []
+    #     for root, _, files in os.walk(music_dir):
+    #         for file in files:
+    #             if file.lower().endswith((".mp3", ".wav", ".flac", ".ogg")):
+    #                 path = os.path.join(root, file)
+    #                 tracks.append(Track(path=path, title=file, artist="", duration_ms=0))
+
+    #     tracks.sort(key=lambda track: track.display_title.lower())
+    #     logger.info("desktop_scan complete: %d track(s)", len(tracks))
+    #     return tracks

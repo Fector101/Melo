@@ -2,6 +2,8 @@
 
 import logging
 
+# from android_notify.config import on_android_platform
+
 logger = logging.getLogger("melo.permissions")
 
 try:
@@ -46,6 +48,9 @@ class PermissionsRepository:
 
     def request_audio_access(self, callback):
         """Ask for the permission; ``callback(granted)`` reports the answer."""
+        # if not on_android_platform():
+        #     callback(True)
+        #     return
         if MediaPermissionHandler is None:
             callback(False)
             return
