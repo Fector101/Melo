@@ -83,7 +83,7 @@ class MeloApp(App):
 
     def weird_clock_issue(self, dt):
         # Clock fired immediately reaching shedule line, so schedule again after that.
-        Clock.schedule_once(self._start, 1)
+        Clock.schedule_once(self._start, 0.7)
         
     @mainthread
     def _start(self, _dt):
