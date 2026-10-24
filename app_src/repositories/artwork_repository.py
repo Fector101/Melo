@@ -62,7 +62,7 @@ class ArtworkRepository:
     """Cached access to the cover art of a track.
 
     ``extract`` decodes the embedded picture with the Android
-    ``MediaMetadataRetriever``, so it blocks and has to run on a worker
+    ``MediaMetadataRetriever``,which blocks so has to run on a worker
     thread. The bytes are written once into the cache directory, which keeps
     every file to a single decode per install.
     """
@@ -87,6 +87,8 @@ class ArtworkRepository:
         self._directory_ready = True
         if not self._cache_dir:
             base = os.environ.get("ANDROID_PRIVATE", "")
+            # ANDROID_PRIVATE, I tested this as a faster way to get private path instead of jnius
+            # , so using it as a fallback incase kivy `self.user_data_dir` is ""
             self._cache_dir = os.path.join(base, "art_cache") if base else ""
 
         if self._cache_dir:
@@ -115,50 +117,52 @@ class ArtworkRepository:
         retriever_class = get_media_metadata_retriever()
         directory = self._directory() if retriever_class is not None else ""
 
-        if directory:
-            stem = os.path.join(directory,
-                                f"{zlib.crc32(key.encode('utf-8')):08x}")
-            for extension in (".jpg", ".png"):  # reused from an earlier run
-                if os.path.exists(stem + extension):
-                    result = stem + extension
-                    break
-            else:
-                retriever = None
+        if not directory:
+            self._paths[key] = result
+            return result
+
+        # Checks if thumb ready exists
+        stem = os.path.join(directory, f"{zlib.crc32(key.encode('utf-8')):08x}")
+        for extension in (".jpg", ".png"):  # reused from an earlier run
+            if os.path.exists(stem + extension):
+                result = stem + extension
+                break
+        if result:
+            self._paths[key] = result
+            return result
+
+        retriever = None
+        try:
+            retriever = retriever_class()
+            retriever.setDataSource(key)
+            art = retriever.getEmbeddedPicture()
+            if art:
+                data = bytes(art)
+                # Try to downscale for smaller thumbnails
+                downscaled = _downscale_artwork_android(data)
+                if downscaled:
+                    data = downscaled
+                    target = stem + ".jpg"
+                else:
+                    target = stem + ".png" if data[:8] == b"\x89PNG\r\n\x1a\n" else ".jpg"
+                with open(target, "wb") as handle:
+                    handle.write(data)
+                result = target
+        except Exception as error:
+            # pyjnius builds a multi-line message (class, text and
+            # every Java frame), which logcat prints as a wall of
+            # stack. Keep it to one line, and only once per file type.
+            extension = os.path.splitext(key)[1].lower() or "<none>"
+            if extension not in self._failed_extensions:
+                self._failed_extensions.add(extension)
+                reason = str(error).splitlines()[0] if str(error) else error
+                logger.debug("no embedded art for %s files: %s",extension, reason)
+        finally:
+            if retriever is not None:
                 try:
-                    retriever = retriever_class()
-                    retriever.setDataSource(key)
-                    art = retriever.getEmbeddedPicture()
-                    if art:
-                        data = bytes(art)
-                        # Try to downscale for smaller thumbnails
-                        downscaled = _downscale_artwork_android(data)
-                        if downscaled:
-                            data = downscaled
-                            target = stem + ".jpg"
-                        else:
-                            target = stem + (".png"
-                                             if data[:8] == b"\x89PNG\r\n\x1a\n"
-                                             else ".jpg")
-                        with open(target, "wb") as handle:
-                            handle.write(data)
-                        result = target
-                except Exception as error:
-                    # pyjnius builds a multi-line message (class, text and
-                    # every Java frame), which logcat prints as a wall of
-                    # stack. Keep it to one line, and only once per file type.
-                    extension = os.path.splitext(key)[1].lower() or "<none>"
-                    if extension not in self._failed_extensions:
-                        self._failed_extensions.add(extension)
-                        reason = (str(error).splitlines()[0] if str(error)
-                                  else error)
-                        logger.debug("no embedded art for %s files: %s",
-                                     extension, reason)
-                finally:
-                    if retriever is not None:
-                        try:
-                            retriever.release()
-                        except Exception:
-                            pass
+                    retriever.release()
+                except Exception:
+                    pass
 
         self._paths[key] = result
         return result
