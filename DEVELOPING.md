@@ -1,13 +1,10 @@
 # Developing Melo
 
-Melo is a one-screen music player for Android, written in pure Kivy.
-It scans the device for audio files, shows them in a list, plays
-them with a media notification / lock screen entry, and reads the cover art
-that is embedded in the files.
+Melo is a lightweight music player for Android, written in pure Kivy.
+It displays all the device for audio files in your devices and plays them with a media notification.
 
-This document is the map of the codebase: how it is put together, where a
-change belongs, how to check your work, and the handful of traps that will
-cost you an afternoon if you do not know about them.
+
+This document is the map of the codebase: i put this together to make development process easier
 
 ---
 
@@ -15,20 +12,18 @@ cost you an afternoon if you do not know about them.
 
 ```
 Melo/
-├── buildozer.spec         the Android build (do not touch casually)
-├── app_src/               <- everything that ships into the APK
-│   ├── main.py            the composition root: builds and wires everything
+├── buildozer.spec         specifications for buildozer (do not touch casually)
+├── app_src/               contains all the files that actually go into APK
+│   ├── main.py            the composition root: builds and wires viewmodel to UI
 │   ├── core/              platform glue (JVM, window insets)
 │   ├── models/            the domain model (Track)
 │   ├── repositories/      device access (MediaStore, artwork, audio, notification)
 │   ├── viewmodels/        observable state + commands (library, player)
 │   └── ui/                widgets, the screen and the KV rules
-└── tests/                 pytest suite (repo root on purpose: not packaged)
+└── tests/                 pytest suite
 ```
 
-`app_src/` is a *flat source directory*, not a Python package: buildozer
-copies it into the APK as-is and the app runs with `app_src/` as the working
-root. That is why every import inside the app is absolute
+`app_src/` is the workingroot, That's why every import inside the app is absolute
 (`from models.track import Track`), and why the tests put `app_src/` on
 `sys.path` themselves.
 
