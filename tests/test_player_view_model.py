@@ -230,4 +230,4 @@ def test_the_end_of_the_playlist_stops_the_playback(player, playback, tracks):
 def test_the_status_line_shows_the_current_track(player, tracks):
     player.play_track(tracks[1])
 
-    assert player._library.status_text == "Track 2 / 3"
+    assert player._library_viewmodel.status_text == "Track 2 / 3"

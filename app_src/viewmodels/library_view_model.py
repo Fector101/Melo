@@ -69,6 +69,7 @@ class LibraryViewModel(EventDispatcher):
         self.status_text = "Requesting audio access..."
         self._permissions.request_audio_access(self._on_permission)
 
+    @mainthread
     def set_status(self, text):
         """Set the status line (the player uses it too)."""
         self.status_text = text
@@ -154,7 +155,7 @@ class LibraryViewModel(EventDispatcher):
     def on_artwork_ready(self, *_args, **_kwargs):
         """The default handler of the event; the view binds to it."""
 
-
+# Switching over to threading.Event will add completity to _on_artwork_ready
 
 # How it works step by step
 # Tag each load with a version - When load_artwork() is called, it does self._art_generation += 1 and saves that number into a local variable generation. That generation is "owned" by this specific call and captured by the worker thread.

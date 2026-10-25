@@ -119,8 +119,7 @@ class KivySoundController:
         try:
             length = self.get_length()
             pos = self.get_pos()
-            logger.debug("end check: length=%.2f pos=%.2f diff=%.3f", length,
-                         pos, (length - pos) if length > 0 else -1)
+            logger.debug("end check: length=%.2f pos=%.2f diff=%.3f", length, pos, (length - pos) if length > 0 else -1)
             if length > 1.0 and pos >= length - 0.25:
                 logger.info("native completion detected -> advancing")
                 if not run_on_ui_thread(cb):
@@ -308,22 +307,13 @@ class PlaybackRepository:
         """Show ``title``/``artist`` in the media notification."""
         if self._controller is None:
             return
-        if self._notification is None:
-            if MediaNotification is None:
-                return
-            try:
-                self._notification = MediaNotification(
-                    mediaController=self._controller,
-                    on_next=self._on_next,
-                    on_previous=self._on_previous,
-                )
-            except Exception as error:
-                logger.warning("no media notification: %s", error)
-                return
-        try:
-            self._notification.setNowPlaying(str(title), artist)
-        except Exception as error:
-            logger.debug("could not set the now playing info: %s", error)
+        
+        self._notification = MediaNotification(
+            mediaController=self._controller,
+            on_next=self._on_next,
+            on_previous=self._on_previous,
+        )
+        self._notification.setNowPlaying(str(title), artist)
         self.sync_notification()
 
     def sync_notification(self):
