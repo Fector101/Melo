@@ -35,12 +35,6 @@ Melo/
 To make room for logical tests and possible additions of other platforms, The Android MediaStore scan returns an empty
 list, the artwork extractor does nothing and the JVM calls are skipped.
 
-```shell
-cd Melo
-python3 -m pytest tests/ -q          # the test suite
-python3 -m compileall -q app_src     # syntax check
-```
-
 Melo uses kivy 3.0.0.dev0 for audio feature to work properly, I'm currently using an editable install of kivy pulled straight from master for development, it lives in `app_src`, If you encounter issues with the Kivy import, ensure that the editable install is correctly set up, 
 
 If `import kivy` fails with `ModuleNotFoundError`, the point to the kivy installed environment which contains yours
@@ -348,7 +342,8 @@ still only talks to the view models.
 
 ```shell
 cd /home/fabian/Documents/Melo
-python3 -m pytest tests/ -q
+python3 -m pytest tests/ -q         # the test suite 
+python3 -m compileall -q app_src     # syntax check
 ```
 
 | File | Covers |
