@@ -63,9 +63,8 @@ class PlayerViewModel(EventDispatcher):
         self._library_viewmodel.bind(tracks=self._on_tracks_changed)
         
         self._playback_repository.set_on_track_end(self._on_track_end)
-        self._playback_repository.set_transport_callbacks(
-            on_next=self.next_track,
-            on_previous=self.previous_track)
+        self._playback_repository.set_transport_callbacks(on_next=self.next_track, on_previous=self.previous_track)
+        self._playback_repository.set_on_playing_state_change(self._set_playing_state)
 
     # ------------------------------------------------------------------ #
     # Lifecycle                                                           #
@@ -109,7 +108,6 @@ class PlayerViewModel(EventDispatcher):
         else:
             self._playback_repository.play()
             logger.info("play")
-        self.is_playing = self._playback_repository.is_playing
         self._last_pos = self._playback_repository.get_position()
         self._playback_repository.sync_notification()
 
@@ -130,7 +128,7 @@ class PlayerViewModel(EventDispatcher):
         if not tracks:
             return
         if _should_prev_button_only_restart_playing_song(self._playback_repository):
-            self._restart_playing_song()
+            self._restart_playing_song(resume=self._playback_repository.is_playing)
             return
         if self._index > 0:
             self._index -= 1
@@ -162,6 +160,10 @@ class PlayerViewModel(EventDispatcher):
     # ------------------------------------------------------------------ #
     # Internals                                                           #
     # ------------------------------------------------------------------ #
+    @mainthread
+    def _set_playing_state(self, state):
+        self.is_playing = state
+
     def _current(self):
         """The track that should be playing (None when there is none)."""
         tracks = self._library_viewmodel.tracks
@@ -210,7 +212,6 @@ class PlayerViewModel(EventDispatcher):
         self._pending_seek = None
         self._last_pos = 0.0
         self._library_viewmodel.set_status(f"Track {self._index + 1} / {len(self._library_viewmodel.tracks)}")
-        self.is_playing = self._playback_repository.is_playing
 
     def _on_current_track(self, _instance, track):
         """The loaded track changed: show its title, artist and cover."""
@@ -252,10 +253,6 @@ class PlayerViewModel(EventDispatcher):
         # Safe fallback once Kivy's loop wakes back up
         self.position = target_position
 
-
-    # ------------------------------------------------------------------ #
-    # Ticker: progress + completion detection (no on_complete event)      #
-    # ------------------------------------------------------------------ #
     def _on_tick(self, _dt):
         if not self._playback_repository.has_controller:
             return
@@ -272,15 +269,10 @@ class PlayerViewModel(EventDispatcher):
                 self._pending_seek = None
             else:
                 self.position = self._pending_seek
-                self.is_playing = self._playback_repository.is_playing
                 return
 
         if not self.is_seeking:
             self.position = min(pos, self.duration) if self.duration > 0 else pos
-        self.is_playing = self._playback_repository.is_playing
-
-        if not self._playback_repository.is_playing:
-            return
 
     def _on_track_end(self, *args):
         """The engine stopped on its own: the track is over."""
@@ -297,7 +289,6 @@ class PlayerViewModel(EventDispatcher):
         # end of the playlist
         self._playback_repository.seek(0)
         self._playback_repository.pause()
-        self.is_playing = False
         self._reset_seek_ui()
         self._playback_repository.sync_notification()
 
@@ -307,12 +298,12 @@ class PlayerViewModel(EventDispatcher):
         self._last_pos = 0.0  # don't let the "rewound" check refire
         self.position = 0.0
 
-    def _restart_playing_song(self):
+    def _restart_playing_song(self, resume=True):
         """Helper method to restart a song"""
         logger.debug("loop enabled, restarting track")
-        self.is_playing = True
-        self._playback_repository.play()
         self._playback_repository.seek(0)
+        if resume: # incase song has been paused and user clicks prev to rewind
+            self._playback_repository.play()
         self._reset_seek_ui() # Clock.schedule_once(lambda dt: self._reset_seek_ui())
         self._playback_repository.sync_notification()
 

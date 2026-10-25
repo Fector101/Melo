@@ -68,6 +68,7 @@ def _keep_cpu_awake(sound):
         logger.debug("setWakeMode unavailable: %s", error)
 
 
+
 class KivySoundController:
     """Minimal ``IMediaController`` adapter around a Kivy ``Sound`` (no events).
 
@@ -88,9 +89,13 @@ class KivySoundController:
         self._loop = False
         self._user_stopped = False
         self._on_track_end = None
+        self._on_playing_state_changed = None
 
     def set_on_track_end(self, callback):
         self._on_track_end = callback
+
+    def set_on_playing_state_change(self, callback):
+        self._on_playing_state_changed = callback
 
     def load(self, path):
         """Drop the current sound and load a new one. Returns True on success."""
@@ -146,7 +151,16 @@ class KivySoundController:
         self._pos = 0.0
         self._playing = False
         self._paused = False
+        self._send_playing_state_to_viewmodel(False)
 
+    def _send_playing_state_to_viewmodel(self, playing):
+        if self._on_playing_state_changed is None:
+            return
+        try:
+            self._on_playing_state_changed(playing)
+        except Exception as error:
+            logger.debug("playing state callback failed: %s", error)
+            
     # I'm using on_stop to seek back to 0 because when using kkivy loop,there's no where to know when the track finished playing.
     @property
     def loop(self):
@@ -183,6 +197,7 @@ class KivySoundController:
             self._sound.seek(self._pos)
         self._paused = False
         self._playing = True
+        self._send_playing_state_to_viewmodel(True)
 
     def pause(self):
         if self._sound is None:
@@ -192,6 +207,7 @@ class KivySoundController:
         self._sound.stop()  # Kivy Sound has no pause(); stop and remember.
         self._paused = True
         self._playing = False
+        self._send_playing_state_to_viewmodel(False)
 
     def seek(self, seconds):
         if self._sound is None:
@@ -230,8 +246,13 @@ class PlaybackRepository:
         self._on_track_end = None
         self._on_next = None
         self._on_previous = None
+        self._sync_playing_state = None # simply tells the view model when music has been pause or played
 
     # --- wiring -------------------------------------------------------------
+    def set_on_playing_state_change(self, callback):
+        """Sync boolean state if media is playing or not to viewmodel"""
+        self._sync_playing_state = callback
+
     def set_on_track_end(self, callback):
         """The callback the engine calls when a track finished on its own."""
         self._on_track_end = callback
@@ -275,6 +296,7 @@ class PlaybackRepository:
         """Load ``path`` and return whether it worked."""
         if self._controller is None:
             self._controller = KivySoundController()
+            self._controller.set_on_playing_state_change(self._sync_playing_state)
             self._controller.set_on_track_end(self._handle_track_end)
         return self._controller.load(path)
 
