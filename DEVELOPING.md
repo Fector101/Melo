@@ -8,8 +8,7 @@ This document is the map of the codebase: i put this together to make developmen
 
 ---
 
-## 1. Where the code lives
-
+## 1. Codebase structure
 ```
 Melo/
 ├── buildozer.spec         specifications for buildozer (do not touch casually)
@@ -23,36 +22,30 @@ Melo/
 └── tests/                 pytest suite
 ```
 
-`app_src/` is the workingroot, That's why every import inside the app is absolute
+`app_src/` is the working root, That's why every import inside the app is absolute
 (`from models.track import Track`), and why the tests put `app_src/` on
-`sys.path` themselves.
+`sys.path`.
 
 ---
 
 ## 2. Running it
 
-### On the desktop (no device)
+### On the desktop
 
-The app degrades gracefully off Android: the MediaStore scan returns an empty
-list, the artwork extractor does nothing, the JVM calls are skipped. So you
-can build the whole widget tree on a laptop:
+To make room for logical tests and possible additions of other platforms, The Android MediaStore scan returns an empty
+list, the artwork extractor does nothing and the JVM calls are skipped.
 
 ```shell
-cd /home/fabian/Documents/Melo
+cd Melo
 python3 -m pytest tests/ -q          # the test suite
 python3 -m compileall -q app_src     # syntax check
 ```
 
-Melo uses kivy 3.0.0.dev0 for audio feature to work properly, I'm currently reusing the Waller env for development which carries editable install of the vendored sources in
-`/home/fabian/Documents/python-android/app_src/kivy`. If you encounter issues with the Kivy import, ensure that the editable install is correctly set up.
+Melo uses kivy 3.0.0.dev0 for audio feature to work properly, I'm currently using an editable install of kivy pulled straight from master for development, it lives in `app_src`, If you encounter issues with the Kivy import, ensure that the editable install is correctly set up, 
 
 If `import kivy` fails with `ModuleNotFoundError`, the point to the kivy installed environment which contains yours
 
-```shell
-PYTHONPATH=/home/fabian/Documents/python-android/app_src python3 -m pytest tests/ -q
-```
-
-### On a device
+### On Android
 
 ```shell
 buildozer android debug
@@ -65,18 +58,15 @@ What the build does:
 | Setting | Meaning |
 | --- | --- |
 | `source.dir = app_src` | only `app_src/` is packaged - `tests/` stays out of the APK |
-| `p4a.bootstrap = sdl3` | SDL3 for window and input |
-| `requirements = ... kivy==master, android_notify main.zip` | Kivy from master, `android_notify` from GitHub `main` |
+| `p4a.bootstrap = sdl3` | SDL3 required for kivy3 |
+| `requirements = kivy==master, android_notify main.zip` | Kivy from master, `android_notify` from GitHub `main` |
 | `android.permissions` | `INTERNET`, `POST_NOTIFICATIONS`, `READ_MEDIA_AUDIO` (+ legacy `READ_EXTERNAL_STORAGE` up to API 32) |
-| `android.gradle_dependencies` | `android-notify-music-bridge` - the Java side of the media notification |
-| `android.api = 36`, `android.ndk = 29` | current toolchain |
-
-The `.kv` files are shipped automatically: buildozer's default
-`source.include_exts` is `py,png,jpg,kv,atlas`.
+| `android.gradle_dependencies` | `android-notify-music-bridge` - helps send the media notification clicks to Python callback functions |
 
 ---
 
 ## 3. The architecture
+Rule of thumb: UI speaks to Viewmodel, Viewmodel speaks to Repository. UI and Repository never come in contact except through Viewmodel
 
 The code is split into five layers that only depend downwards.
 
@@ -108,7 +98,7 @@ The rules, in one sentence each:
   know nothing about widgets.
 - **`repositories/` never import `ui/`.** They are the only layer that talks
   to Android (MediaStore, the JVM, the audio engine).
-- **`models/` is pure data.** No Kivy, no Android - so process layer can rely
+- **`models/` is pure data.** No Kivy, no Android - so any process layer can rely
   on it.
 - **`main.py` is the only file that knows all the layers.** It builds the
   repositories, the view models and the screen, and hands them to each other.
