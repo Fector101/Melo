@@ -213,10 +213,11 @@ row tapped -> SongRow.on_release -> on_select(path)
 ```
 
 The progress bar is kept in sync by a ticker (`Clock.schedule_interval`,
-every 0.25s). Kivy's audio API has **no `on_complete` event**, so the end of
-a track is detected from the position: the ticker sees the position at the
-track length, or sees a rewind while the state is still "play". The same
-ticker advances to the next track.
+every 0.25s); the ticker only reads the position. Kivy's audio API has **no
+`on_complete` event**, so `KivySoundController` treats `Sound.on_stop` as the
+end of a track: the sound stopped on its own and the position is at the
+length. That callback (`_on_track_end`) restarts the track when looping,
+advances otherwise, and stops at the end of the playlist.
 
 ---
 

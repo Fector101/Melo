@@ -65,7 +65,7 @@ def test_the_rows_are_built_from_the_tracks(screen):
     assert rows[0]["active"] is False
 
 
-def test_the_row_of_the_playing_track_is_highlighted(screen):
+def test_the_row_of_the_playing_track_is_highlighted(screen, immediate_clock):
     view, library_vm, player_vm = screen
     library_vm.tracks = make_tracks()
 
@@ -75,7 +75,7 @@ def test_the_row_of_the_playing_track_is_highlighted(screen):
     assert view.ids.songs.data[0]["active"] is False
 
 
-def test_tapping_a_row_plays_the_track(screen):
+def test_tapping_a_row_plays_the_track(screen, immediate_clock):
     view, library_vm, player_vm = screen
     library_vm.tracks = make_tracks()
 
@@ -114,7 +114,7 @@ def test_the_cover_of_a_track_fills_its_row(screen):
 # --------------------------------------------------------------------------- #
 # The player                                                                  #
 # --------------------------------------------------------------------------- #
-def test_the_player_bar_shows_what_the_player_reports(screen):
+def test_the_player_bar_shows_what_the_player_reports(screen, immediate_clock):
     view, library_vm, player_vm = screen
     library_vm.tracks = make_tracks()
 
@@ -127,7 +127,7 @@ def test_the_player_bar_shows_what_the_player_reports(screen):
     assert player_bar.total == 60.0
 
 
-def test_the_position_moves_the_seek_bar(screen):
+def test_the_position_moves_the_seek_bar(screen, immediate_clock):
     view, library_vm, player_vm = screen
     library_vm.tracks = make_tracks()
     player_vm.play_track(library_vm.tracks[0])
@@ -137,7 +137,7 @@ def test_the_position_moves_the_seek_bar(screen):
     assert view.ids.player_bar.position == 12.0
 
 
-def test_the_next_button_plays_the_next_track(screen):
+def test_the_next_button_plays_the_next_track(screen, immediate_clock):
     view, library_vm, player_vm = screen
     library_vm.tracks = make_tracks()
     player_vm.play_track(library_vm.tracks[0])
@@ -147,7 +147,7 @@ def test_the_next_button_plays_the_next_track(screen):
     assert player_vm.current_track is library_vm.tracks[1]
 
 
-def test_the_play_button_pauses_the_playback(screen):
+def test_the_play_button_pauses_the_playback(screen, immediate_clock):
     view, library_vm, player_vm = screen
     library_vm.tracks = make_tracks()
     player_vm.play_track(library_vm.tracks[0])
@@ -200,7 +200,7 @@ def test_the_scan_button_starts_a_scan(screen):
     assert calls == [True]
 
 
-def test_the_status_line_is_shown(screen):
+def test_the_status_line_is_shown(screen, immediate_clock):
     view, library_vm, _ = screen
 
     library_vm.set_status("3 songs added")

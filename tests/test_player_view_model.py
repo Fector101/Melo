@@ -31,7 +31,7 @@ def player(playback, library, artwork, tracks):
 # --------------------------------------------------------------------------- #
 # Commands                                                                    #
 # --------------------------------------------------------------------------- #
-def test_playing_a_track_loads_it(player, playback, tracks):
+def test_playing_a_track_loads_it(player, playback, tracks, immediate_clock):
     player.play_track(tracks[1])
 
     assert playback.loaded == "/music/1.mp3"
@@ -48,9 +48,11 @@ def test_playing_a_track_publishes_it_in_the_notification(player, playback,
     assert playback.now_playing == ("Track 2", "Artist 2")
 
 
-def test_toggle_play_pause_pauses_and_resumes(player, playback, tracks):
+def test_toggle_play_pause_pauses_and_resumes(player, playback, tracks,
+                                               immediate_clock):
     player.play_track(tracks[0])
     assert playback.playing is True
+    assert player.is_playing is True
 
     player.toggle_play_pause()
     assert playback.playing is False
@@ -83,19 +85,23 @@ def test_next_and_previous_track(player, playback, tracks):
 def test_notification_next_and_previous_play_audio_before_ui_refresh(
         player, playback, tracks, monkeypatch):
     scheduled = []
-    monkeypatch.setattr(
-        Clock, "schedule_once",
-        lambda callback, timeout=0: scheduled.append((callback, timeout)))
+
+    def schedule_once(callback, timeout=0):
+        scheduled.append(callback)
+
+    def flush():
+        while scheduled:
+            scheduled.pop(0)(0)
+
+    monkeypatch.setattr(Clock, "schedule_once", schedule_once)
     player.play_track(tracks[0])
+    flush()
 
     playback.on_next()
 
     assert playback.loaded == "/music/1.mp3"
-    assert player.current_track is tracks[0]
-    assert len(scheduled) == 1
-    callback, timeout = scheduled.pop()
-    assert timeout == 0
-    callback(0)
+    assert player.current_track is tracks[0]  # the UI waits for the frame
+    flush()
     assert playback.loaded == "/music/1.mp3"
     assert player.current_track is tracks[1]
 
@@ -103,10 +109,7 @@ def test_notification_next_and_previous_play_audio_before_ui_refresh(
 
     assert playback.loaded == "/music/0.mp3"
     assert player.current_track is tracks[1]
-    assert len(scheduled) == 1
-    callback, timeout = scheduled.pop()
-    assert timeout == 0
-    callback(0)
+    flush()
     assert playback.loaded == "/music/0.mp3"
     assert player.current_track is tracks[0]
 
@@ -114,10 +117,17 @@ def test_notification_next_and_previous_play_audio_before_ui_refresh(
 def test_notification_previous_restarts_audio_before_ui_refresh(
         player, playback, tracks, monkeypatch):
     scheduled = []
-    monkeypatch.setattr(
-        Clock, "schedule_once",
-        lambda callback, timeout=0: scheduled.append(callback))
+
+    def schedule_once(callback, timeout=0):
+        scheduled.append(callback)
+
+    def flush():
+        while scheduled:
+            scheduled.pop(0)(0)
+
+    monkeypatch.setattr(Clock, "schedule_once", schedule_once)
     player.play_track(tracks[1])
+    flush()
     playback.position = 10.0
     player.position = 10.0
 
@@ -125,10 +135,10 @@ def test_notification_previous_restarts_audio_before_ui_refresh(
 
     assert playback.loaded == "/music/1.mp3"
     assert playback.position == 0.0
-    assert player.position == 10.0
-    assert len(scheduled) == 1
-    scheduled.pop()(0)
+    assert player.position == 10.0  # the UI waits for the frame
+    flush()
     assert player.position == 0.0
+    assert player.is_playing is True  # it was playing when prev was pressed
 
 
 def test_previous_restarts_the_track_after_three_seconds(player, playback,
@@ -140,6 +150,20 @@ def test_previous_restarts_the_track_after_three_seconds(player, playback,
 
     assert playback.loaded == "/music/1.mp3"  # not the previous one
     assert playback.position == 0.0
+
+
+def test_previous_while_paused_only_rewinds(player, playback, tracks,
+                                            immediate_clock):
+    player.play_track(tracks[1])
+    playback.pause()
+    playback.position = 10.0
+
+    player.previous_track()
+
+    assert playback.loaded == "/music/1.mp3"
+    assert playback.playing is False
+    assert playback.position == 0.0
+    assert player.is_playing is False
 
 
 def test_seek_moves_the_position(player, playback, tracks, immediate_clock):
@@ -160,10 +184,25 @@ def test_toggle_loop(player, playback, tracks):
     assert playback.loop is True
 
 
+def test_notification_pause_updates_the_view_model(player, playback, tracks,
+                                                   immediate_clock):
+    player.play_track(tracks[0])
+    assert player.is_playing is True
+
+    playback.pause()  # what MediaSessionListener.onPause does
+
+    assert player.is_playing is False
+
+    playback.play()
+
+    assert player.is_playing is True
+
+
 # --------------------------------------------------------------------------- #
 # The ticker                                                                  #
 # --------------------------------------------------------------------------- #
-def test_the_ticker_follows_the_position(player, playback, tracks):
+def test_the_ticker_follows_the_position(player, playback, tracks,
+                                         immediate_clock):
     player.play_track(tracks[0])
     playback.length = 60.0
     playback.position = 12.0
@@ -187,15 +226,15 @@ def test_the_ticker_keeps_quiet_while_the_user_drags(player, playback,
     assert player.position == 0.0  # not moved by the ticker
 
 
-def test_the_ticker_advances_at_the_end_of_a_track(player, playback, tracks):
+def test_the_ticker_does_not_advance_the_track(player, playback, tracks):
+    """The engine's stop callback advances; the ticker must not."""
     player.play_track(tracks[0])
     playback.length = 60.0
     playback.position = 59.9
 
     player._on_tick(0.25)
 
-    assert playback.loaded == "/music/1.mp3"
-    assert playback.playing is True
+    assert playback.loaded == "/music/0.mp3"
 
 
 def test_the_native_end_callback_advances(player, playback, tracks):
@@ -217,7 +256,8 @@ def test_the_native_end_callback_does_not_advance_when_looping(player,
     assert playback.loaded == "/music/0.mp3"
 
 
-def test_the_end_of_the_playlist_stops_the_playback(player, playback, tracks):
+def test_the_end_of_the_playlist_stops_the_playback(player, playback, tracks,
+                                                    immediate_clock):
     player.play_track(tracks[-1])
 
     playback.on_track_end()
@@ -227,7 +267,8 @@ def test_the_end_of_the_playlist_stops_the_playback(player, playback, tracks):
     assert player.position == 0.0
 
 
-def test_the_status_line_shows_the_current_track(player, tracks):
+def test_the_status_line_shows_the_current_track(player, tracks,
+                                                 immediate_clock):
     player.play_track(tracks[1])
 
     assert player._library_viewmodel.status_text == "Track 2 / 3"

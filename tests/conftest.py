@@ -36,10 +36,14 @@ class FakePlayback:
         self.on_track_end = None
         self.on_next = None
         self.on_previous = None
+        self.on_playing_state_change = None
 
     # --- wiring ---
     def set_on_track_end(self, callback):
         self.on_track_end = callback
+
+    def set_on_playing_state_change(self, callback):
+        self.on_playing_state_change = callback
 
     def set_transport_callbacks(self, on_next=None, on_previous=None):
         self.on_next = on_next
@@ -69,9 +73,15 @@ class FakePlayback:
 
     def play(self):
         self.playing = True
+        self._notify_playing_state()
 
     def pause(self):
         self.playing = False
+        self._notify_playing_state()
+
+    def _notify_playing_state(self):
+        if self.on_playing_state_change is not None:
+            self.on_playing_state_change(self.playing)
 
     def seek(self, seconds):
         self.position = float(seconds)
@@ -87,6 +97,7 @@ class FakePlayback:
 
     def stop(self):
         self.playing = False
+        self._notify_playing_state()
 
     # --- notification ---
     def set_now_playing(self, title, artist):

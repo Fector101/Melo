@@ -68,7 +68,6 @@ def _keep_cpu_awake(sound):
         logger.debug("setWakeMode unavailable: %s", error)
 
 
-
 class KivySoundController:
     """Minimal ``IMediaController`` adapter around a Kivy ``Sound`` (no events).
 
@@ -161,7 +160,7 @@ class KivySoundController:
         except Exception as error:
             logger.debug("playing state callback failed: %s", error)
             
-    # I'm using on_stop to seek back to 0 because when using kkivy loop,there's no where to know when the track finished playing.
+    # I'm using on_stop to seek back to 0 because when using kivy loop,there's no where to know when the track finished playing.
     @property
     def loop(self):
         return self._loop
@@ -250,8 +249,10 @@ class PlaybackRepository:
 
     # --- wiring -------------------------------------------------------------
     def set_on_playing_state_change(self, callback):
-        """Sync boolean state if media is playing or not to viewmodel"""
+        """Mirror the engine's play/pause state into the view model."""
         self._sync_playing_state = callback
+        if self._controller is not None:
+            self._controller.set_on_playing_state_change(callback)
 
     def set_on_track_end(self, callback):
         """The callback the engine calls when a track finished on its own."""

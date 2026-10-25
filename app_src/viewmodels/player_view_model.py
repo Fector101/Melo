@@ -1,8 +1,8 @@
 """The view model of the player.
 
 It holds what is playing and the transport commands, and it owns the ticker
-that keeps the progress bar in sync. There is no ``on_complete`` event in
-Kivy's audio API, so the end of a track is detected from the position.
+that keeps the progress bar in sync. The end of a track is reported by the
+engine's ``on_stop`` callback (see ``KivySoundController``), not the ticker.
 """
 
 import logging
@@ -299,12 +299,12 @@ class PlayerViewModel(EventDispatcher):
         self.position = 0.0
 
     def _restart_playing_song(self, resume=True):
-        """Helper method to restart a song"""
-        logger.debug("loop enabled, restarting track")
+        """Restart the loaded track from 0, optionally resuming playback."""
+        logger.debug("restarting track from 0 (resume=%s)", resume)
         self._playback_repository.seek(0)
-        if resume: # incase song has been paused and user clicks prev to rewind
+        if resume: # keeps the song paused state when user clicks prev btn
             self._playback_repository.play()
-        self._reset_seek_ui() # Clock.schedule_once(lambda dt: self._reset_seek_ui())
+        self._reset_seek_ui()
         self._playback_repository.sync_notification()
 
 
