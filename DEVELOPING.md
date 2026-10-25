@@ -438,11 +438,3 @@ settings. Natural next steps, in the order they would pay off:
 
 ---
 
-## 10. Ground rules
-
-- Do not edit `buildozer.spec` unless the task is about the build.
-- Do not bump the version unless asked (it lives in `buildozer.spec`).
-- Do not commit or push without being asked - the changes are tested on a
-  real device first.
-- Keep the layer rules. A repository that imports `ui/`, or a screen that
-  calls a repository, is a bug even when the app still runs.
