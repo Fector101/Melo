@@ -1,0 +1,10 @@
+Melo v0.0.1
+
+The first release of Melo.
+
+- Browse the music on your device and play it from one clean screen.
+- A now-playing bar with artwork, seeking, and the usual transport controls.
+- Media notifications with the controls you need while the phone is locked.
+- An update screen that picks the build for your phone and shows what changed.
+
+Thanks to everyone who tried Melo and reported what felt wrong.

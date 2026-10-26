@@ -369,6 +369,26 @@ Two things to know when writing a test:
   `view.ids.player_bar.ids.next_button.dispatch("on_release", None)`.
   `ButtonBehavior.on_release` is a no-op, so `None` is safe.
 
+### On the phone
+
+Melo is Kivy, so none of its widgets are in Android's accessibility tree: no
+`uiautomator`, no resource ids. The device test therefore taps the widgets and
+reads the result back out of the framebuffer:
+
+```shell
+V=/home/fabian/Documents/python-android/venv/bin/python
+$V scripts/device_self_update_test.py     # whole self-update flow, ~90 s
+$V scripts/device_screen.py               # describe what is on the screen now
+```
+
+`scripts/device_screen.py` parses the raw `adb exec-out screencap` output
+(header + pixels, no Pillow) and answers "how many pixels are `#5cb8f0`, where
+is the widest accent band, how wide is the ink inside it" plus an ASCII map.
+`scripts/device_self_update_test.py` uses that to serve a fake release and
+check download, cancel, resume, install and the update chip without a single
+screenshot being looked at. Colours, thresholds and pitfalls:
+`.facts/device-screen-reading.md`.
+
 ---
 
 ## 8. Traps

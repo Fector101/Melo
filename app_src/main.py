@@ -12,10 +12,13 @@ in one of these layers:
 """
 
 import logging
+import os
+import threading
 
 from kivy.app import App
 from kivy.clock import Clock, mainthread
 from kivy.core.window import Window
+from kivy.metrics import dp
 from kivy.utils import platform
 
 from android_notify import logger as android_notify_logger
@@ -77,6 +80,19 @@ class MeloApp(App):
         # Android).
         attach_insets(self.root_ui)
 
+        # The update check is deliberately late: startup and the first scan
+        # must not wait on the network. The updater modules are imported only
+        # after this check has found a newer release.
+        self._update_repository = None
+        self._update_view_model = None
+        self._update_screen = None
+        self._update_chip = None
+        self._update_chip_class = None
+        self.root_ui.bind(size=self._position_update_chip,
+                          inset_top=self._position_update_chip,
+                          inset_right=self._position_update_chip)
+        Clock.schedule_once(self._check_updates_later, 6)
+
         # Avoiding black after splash screen so waiting a bit before scan.
         Clock.schedule_once(self.weird_clock_issue,1)
         return self.root_ui
@@ -90,7 +106,102 @@ class MeloApp(App):
         logger.info("starting: request audio permission")
         self.library_view_model.scan()
 
+    # ------------------------------------------------------------------ #
+    # Self-update                                                         #
+    # ------------------------------------------------------------------ #
+    def _check_updates_later(self, _dt):
+        """Run the update check off the UI thread, after startup settles."""
+        if platform != "android" and not os.environ.get("MELO_UPDATE_API_URL"):
+            return
+        threading.Thread(target=self._check_updates, daemon=True).start()
+
+    def _check_updates(self):
+        try:
+            from repositories.update_repository import UpdateRepository
+
+            repository = UpdateRepository()
+            release = repository.check_for_update()
+        except Exception:
+            logger.exception("Update check failed")
+            return
+        if release is None:
+            return
+        Clock.schedule_once(
+            lambda _dt: self._show_update(repository, release), 0)
+
+    def _show_update(self, repository, release):
+        """Build and open the update screen (only once, then reuse it)."""
+        if self._update_screen is not None:
+            self._open_update_screen()
+            return
+        try:
+            from ui.screens.update_screen import UpdateScreen
+            from ui.widgets.update import UpdateChip
+            from viewmodels.update_view_model import UpdateViewModel
+
+            installed = repository.get_installed_version()
+            view_model = UpdateViewModel(repository, release, installed)
+            screen = UpdateScreen(view_model)
+        except Exception:
+            logger.exception("Could not build the update screen")
+            return
+
+        screen.bind(on_dismiss=lambda *_: self._show_update_chip())
+        self._update_repository = repository
+        self._update_view_model = view_model
+        self._update_screen = screen
+        self._update_chip_class = UpdateChip
+        self._bind_update_insets(screen)
+        screen.open()
+        self._remove_update_chip()
+
+    def _bind_update_insets(self, screen):
+        """Forward the root's live insets to the modal (no second JNI hook)."""
+        root = self.root_ui
+        for name in ("inset_top", "inset_bottom", "inset_left", "inset_right"):
+            setattr(screen, name, getattr(root, name))
+            root.bind(**{
+                name: lambda _instance, value, prop=name: setattr(
+                    screen, prop, value)
+            })
+
+    def _show_update_chip(self):
+        """A small tappable chip after the user chose Later (or went back)."""
+        if self._update_chip is not None or self._update_screen is None:
+            return
+        chip_class = self._update_chip_class
+        if chip_class is None:
+            return
+        version = self._update_view_model.version if self._update_view_model else ""
+        chip = chip_class(text=("Update available  \u00b7  " + version).strip())
+        chip.bind(on_release=lambda *_: self._open_update_screen())
+        chip.bind(size=self._position_update_chip)
+        self._update_chip = chip
+        self.root_ui.add_widget(chip)
+        self._position_update_chip()
+
+    def _position_update_chip(self, *_):
+        chip = self._update_chip
+        if chip is None:
+            return
+        root = self.root_ui
+        chip.x = root.width - chip.width - dp(12) - root.inset_right
+        chip.y = root.height - chip.height - dp(12) - root.inset_top
+
+    def _remove_update_chip(self):
+        chip = self._update_chip
+        if chip is not None:
+            self.root_ui.remove_widget(chip)
+            self._update_chip = None
+
+    def _open_update_screen(self):
+        self._remove_update_chip()
+        if self._update_screen is not None:
+            self._update_screen.open()
+
     def on_stop(self):
+        if self._update_view_model is not None:
+            self._update_view_model.shutdown()
         self.player_view_model.stop()
         self.playback_repository.release()
 
