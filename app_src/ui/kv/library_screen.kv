@@ -1,0 +1,53 @@
+#:import dp kivy.metrics.dp
+#:import THEME ui.theme
+
+<LibraryScreen>:
+    canvas.before:
+        Color:
+            rgba: THEME.BG
+        Rectangle:
+            pos: self.pos
+            size: self.size
+    BoxLayout:
+        orientation: "vertical"
+        size_hint: None, None
+        pos: root.x + root.inset_left, root.y + root.inset_bottom
+        size: root.width - root.inset_left - root.inset_right, root.height - root.inset_top - root.inset_bottom
+        BoxLayout:
+            orientation: "vertical"
+            size_hint_y: None
+            height: self.minimum_height
+            padding: dp(15), dp(30), dp(15), dp(10)
+            spacing: dp(15)
+            Label:
+                text: "Your Library"
+                bold: True
+                font_size: "40sp"
+                halign: "left"
+                valign: "middle"
+                text_size: self.size
+            Label:
+                id: status
+                font_size: "18sp"
+                size_hint_y: None
+                height: dp(34)
+                halign: "left"
+                valign: "middle"
+                text_size: self.size
+                padding: dp(10), 0
+                text: root.status_text
+        RecycleView:
+            id: songs
+            viewclass: "SongRow"
+            RecycleBoxLayout:
+                orientation: "vertical"
+                default_size: None, dp(70)
+                default_size_hint: 1, None
+                size_hint_y: None
+                height: self.minimum_height
+        Player:
+            id: player_bar
+    Fab:
+        id: fab
+        right: root.right - root.inset_right - dp(30)
+        y: root.y + root.inset_bottom + player_bar.height + dp(24)

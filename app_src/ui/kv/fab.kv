@@ -1,0 +1,17 @@
+#:import dp kivy.metrics.dp
+#:import THEME ui.theme
+
+<Fab>:
+    size_hint: None, None
+    size: dp(50), dp(50)
+    canvas.before:
+        Color:
+            rgba: THEME.ACCENT
+        Ellipse:
+            pos: self.pos
+            size: self.size
+    Icon:
+        kind: "sync"
+        color: 1, 1, 1, 1
+        size: dp(24), dp(24)
+        center: root.center
