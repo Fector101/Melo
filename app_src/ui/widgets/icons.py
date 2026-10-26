@@ -65,7 +65,7 @@ class Icon(Widget):
                 Rectangle(pos=(x + w * .72, y), size=(bw, h))
             elif k == "play":
                 Triangle(points=[x + w * .15, y, x + w * .15, y + h,
-                                 x + w * .9, y + h / 2])
+                                 x + w * 1.1, y + h / 2])
             elif k == "prev":
                 Rectangle(pos=(x, y), size=(w * .12, h))
                 Triangle(points=[x + w, y, x + w, y + h,
