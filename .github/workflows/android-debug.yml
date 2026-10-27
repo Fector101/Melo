@@ -11,6 +11,8 @@ name: Debug APK
 # Nothing here publishes: no tag, no release, just artifacts that expire.
 
 on:
+  push:
+    branches: [feat/update-getter]
   workflow_dispatch:
     inputs:
       abi:
