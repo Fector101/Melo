@@ -1,0 +1,113 @@
+#:import dp kivy.metrics.dp
+#:import THEME ui.theme
+#:import format_duration ui.format.format_duration
+
+<Player>:
+    orientation: "vertical"
+    size_hint_y: None
+    height: dp(175)
+    padding: dp(14), dp(10), dp(14), dp(10)
+    spacing: dp(6)
+    canvas.before:
+        Color:
+            rgba: .09, .09, .1, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
+    BoxLayout:
+        spacing: dp(14)
+        Art:
+            source: root.art
+        BoxLayout:
+            id: p
+            orientation: "vertical"
+            size_hint_y: None
+            height: self.minimum_height
+            spacing: dp(10)
+
+            Label:
+                text: root.title
+                font_size: "15sp"
+                halign: "left"
+                valign: "bottom"
+                text_size: self.size
+                shorten: True
+                shorten_from: 'center'
+
+            Label:
+                text: root.artist
+                font_size: "13sp"
+                color: .75, .77, .8, 1
+                halign: "left"
+                valign: "top"
+                size_hint: [None,None]
+                size: self.texture_size
+                shorten_from: 'right'
+                shorten:True
+
+    FloatLayout:
+        size_hint_y: None
+        height: dp(44)
+        # The row is exactly as tall as the tap targets, so the whole area
+        # below the art can be tapped. 44 + 2 spacing keeps the glyph centres
+        # 46 dp apart, and glyph_size keeps the icons at their old size.
+        BoxLayout:
+            size_hint: None, None
+            width: self.minimum_width
+            height: dp(44)
+            spacing: dp(2)
+            pos_hint: {"center_x": .5, "center_y": .5}
+            TransportIcon:
+                id: prev_button
+                kind: "prev"
+                size: dp(44), dp(44)
+                glyph_size: dp(16), dp(16)
+            TransportIcon:
+                id: play_button
+                kind: "play" if not root.playing else "pause"
+                size: dp(44), dp(44)
+                glyph_size: dp(16), dp(20)
+            TransportIcon:
+                id: next_button
+                kind: "next"
+                size: dp(44), dp(44)
+                glyph_size: dp(16), dp(16)
+        TransportIcon:
+            id: repeat_button
+            kind: "repeat"
+            size: dp(44), dp(44)
+            glyph_size: dp(25), dp(25)
+            color: THEME.ACCENT if root.loop_on else THEME.FG
+            # centre_x is where the 25 dp glyph already sits: the bigger box
+            # grows around it instead of shifting it.
+            pos_hint: {"center_x": .932, "center_y": .5}
+    BoxLayout:
+        orientation: "vertical"
+        FillSlider:
+            id: seek
+            min: 0
+            max: root.total
+            value: root.position
+            value_track: True
+            value_track_color: THEME.ACCENT
+            value_track_width: dp(2)
+            cursor_size: 0, 0
+            padding: dp(8)
+            on_value: root.position = self.value
+
+        BoxLayout:
+            size_hint_y: None
+            height: dp(18)
+            padding: dp(8), 0
+            Label:
+                text: format_duration(root.position)
+                font_size: "13sp"
+                color: .6, .62, .66, 1
+                halign: "left"
+                text_size: self.size
+            Label:
+                text: format_duration(root.total)
+                font_size: "13sp"
+                color: .6, .62, .66, 1
+                halign: "right"
+                text_size: self.size
