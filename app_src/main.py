@@ -97,7 +97,7 @@ class MeloApp(App):
         return self.root_ui
 
     def weird_clock_issue(self, dt):
-        # Clock fired immediately reaching schedule line, so schedule again after that.
+        # Clock fired immediately reaching schedule line, so scheduling again here after that.
         Clock.schedule_once(self._start, 0.7)
         Clock.schedule_once(self._check_updates_later, 3)
 
