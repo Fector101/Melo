@@ -37,10 +37,7 @@ android_notify_logger.setLevel(logging.DEBUG)
 logger = logging.getLogger("melo")
 
 if not logging.getLogger().handlers:
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    )
+    logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
 if platform not in ("android", "ios"):
     Window.size = (390, 740)
@@ -102,7 +99,7 @@ class MeloApp(App):
     def weird_clock_issue(self, dt):
         # Clock fired immediately reaching schedule line, so schedule again after that.
         Clock.schedule_once(self._start, 0.7)
-        Clock.schedule_once(self._check_updates_later, 0.6)
+        Clock.schedule_once(self._check_updates_later, 3)
 
     @mainthread
     def _start(self, _dt):
@@ -111,8 +108,8 @@ class MeloApp(App):
 
     def _check_updates_later(self, _dt):
         """Run the update check off the UI thread, after startup settles."""
-        # if platform == "android" or os.environ.get("MELO_UPDATE_API_URL"):
-        threading.Thread(target=self._check_updates, daemon=True).start()
+        if platform == "android" or os.environ.get("MELO_UPDATE_API_URL"):
+            threading.Thread(target=self._check_updates, daemon=True).start()
 
     def _check_updates(self):
         """Build and open the update screen if new version exists (only once, then reuse it)."""
@@ -123,9 +120,9 @@ class MeloApp(App):
         self._update_view_model = UpdateViewModel(self._update_repository)
 
         if self._update_view_model.has_new_version:
-            Clock.schedule_once(lambda _dt: self._show_update(), 0)
+            Clock.schedule_once(lambda _dt: self._show_update_screen(), 0)
 
-    def _show_update(self):
+    def _show_update_screen(self):
         try:
             from ui.screens.update_screen import UpdateScreen
             self._update_screen = UpdateScreen(self._update_view_model)
@@ -134,19 +131,9 @@ class MeloApp(App):
             return
 
         self._update_screen.bind(on_dismiss=lambda *_: self._show_update_chip())
-        self._bind_update_insets(self._update_screen)
+        attach_insets(self._update_screen)
         self._update_screen.open()
         self._remove_update_chip()
-
-    def _bind_update_insets(self, screen):
-        """Forward the root's live insets to the modal (no second JNI hook)."""
-        root = self.root_ui
-        for name in ("inset_top", "inset_bottom", "inset_left", "inset_right"):
-            setattr(screen, name, getattr(root, name))
-            root.bind(**{
-                name: lambda _instance, value, prop=name: setattr(
-                    screen, prop, value)
-            })
 
     def _show_update_chip(self):
         """A small tappable chip after the user chose Later (or went back)."""
@@ -154,21 +141,13 @@ class MeloApp(App):
         from ui.widgets.update import UpdateChip
 
         version = self._update_view_model.version if self._update_view_model else ""
-        self._update_chip = UpdateChip(text=("Update available  \u00b7  " + version).strip())
-        self._update_chip.bind(
+        self._update_chip = UpdateChip(
+            text=("Update available  \u00b7  " + version).strip(),
             on_release=lambda *_: self._open_update_screen(),
-            size=self._position_update_chip
+            pos_hint={"right":0.98}
         )
+        self._update_chip.y = self.root_ui.height - self._update_chip.height - dp(12) - self.root_ui.inset_top
         self.root_ui.add_widget(self._update_chip)
-        self._position_update_chip()
-
-    def _position_update_chip(self, *_):
-        chip = self._update_chip
-        if chip is None:
-            return
-        root = self.root_ui
-        chip.x = root.width - chip.width - dp(12) - root.inset_right
-        chip.y = root.height - chip.height - dp(12) - root.inset_top
 
     def _remove_update_chip(self):
         if self._update_chip:

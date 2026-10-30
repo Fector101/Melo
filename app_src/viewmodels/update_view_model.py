@@ -137,7 +137,9 @@ class UpdateViewModel(EventDispatcher):
         """Start (or resume) the download, or jump straight to Install."""
         if self.state in (DOWNLOADING, INSTALLING):
             return
-
+        if self.release is None: # hot_reload
+            logger.warning("self.release object is None")
+            return
         existing = self.repository.get_apk_path(self.release.asset.name)
         if self.repository.apk_is_valid(existing, self.release.asset.size):
             self._apk_path = existing
