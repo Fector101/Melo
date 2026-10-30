@@ -46,6 +46,14 @@ class FakeRepository:
         self.wait_for_cancel = False
         self.cancelled = False
         self.started = False
+        self.installed_version = "0.0.1"
+        self.release = make_release()
+
+    def get_installed_version(self):
+        return self.installed_version
+
+    def check_for_update(self, installed_version=None, supported_abis=None):
+        return self.release
 
     def get_apk_path(self, filename, directory=None):
         return "/tmp/" + filename
@@ -76,7 +84,7 @@ class FakeRepository:
 
 def make_screen():
     repository = FakeRepository()
-    view_model = UpdateViewModel(repository, make_release(), "0.0.1")
+    view_model = UpdateViewModel(repository)
     return UpdateScreen(view_model), view_model, repository
 
 

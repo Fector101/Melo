@@ -41,6 +41,14 @@ class FakeRepository:
         self.install_result = True
         self.contributors = [OWNER, "bob"]
         self.wait_for_cancel = False
+        self.installed_version = "0.0.1"
+        self.release = make_release()
+
+    def get_installed_version(self):
+        return self.installed_version
+
+    def check_for_update(self, installed_version=None, supported_abis=None):
+        return self.release
 
     def get_apk_path(self, filename, directory=None):
         return "/tmp/" + filename
@@ -99,7 +107,7 @@ def test_dates_and_sizes_are_formatted_for_the_screen():
 
 
 def test_the_view_model_describes_the_release():
-    vm = UpdateViewModel(FakeRepository(), make_release(), "0.0.1")
+    vm = UpdateViewModel(FakeRepository())
 
     assert vm.version == "v0.0.2"
     assert vm.installed == "v0.0.1"
@@ -119,7 +127,7 @@ def test_the_view_model_describes_the_release():
 # --------------------------------------------------------------------------- #
 def test_downloading_ends_ready_and_keeps_the_path(immediate_clock):
     repo = FakeRepository()
-    vm = UpdateViewModel(repo, make_release(), "0.0.1")
+    vm = UpdateViewModel(repo)
 
     vm.download()
     assert wait_for(lambda: vm.state == READY)
@@ -135,7 +143,7 @@ def test_downloading_ends_ready_and_keeps_the_path(immediate_clock):
 def test_a_valid_partial_download_skips_the_network(immediate_clock):
     repo = FakeRepository()
     repo.existing = "/tmp/already-there.apk"
-    vm = UpdateViewModel(repo, make_release(), "0.0.1")
+    vm = UpdateViewModel(repo)
 
     vm.download()
 
@@ -148,7 +156,7 @@ def test_cancelling_returns_to_available_and_keeps_the_partial(
         immediate_clock):
     repo = FakeRepository()
     repo.wait_for_cancel = True
-    vm = UpdateViewModel(repo, make_release(), "0.0.1")
+    vm = UpdateViewModel(repo)
 
     vm.download()
     assert wait_for(repo.started.is_set)
@@ -163,7 +171,7 @@ def test_cancelling_returns_to_available_and_keeps_the_partial(
 def test_a_failed_download_can_be_retried(immediate_clock):
     repo = FakeRepository()
     repo.error = RuntimeError("offline")
-    vm = UpdateViewModel(repo, make_release(), "0.0.1")
+    vm = UpdateViewModel(repo)
 
     vm.download()
     assert wait_for(lambda: vm.state == FAILED)
@@ -177,7 +185,7 @@ def test_a_failed_download_can_be_retried(immediate_clock):
 def test_a_repository_that_returns_none_is_a_failure(immediate_clock):
     repo = FakeRepository()
     repo.result = None
-    vm = UpdateViewModel(repo, make_release(), "0.0.1")
+    vm = UpdateViewModel(repo)
 
     vm.download()
 
@@ -190,7 +198,7 @@ def test_a_repository_that_returns_none_is_a_failure(immediate_clock):
 # --------------------------------------------------------------------------- #
 def test_install_opens_the_installer_and_returns_to_ready(immediate_clock):
     repo = FakeRepository()
-    vm = UpdateViewModel(repo, make_release(), "0.0.1")
+    vm = UpdateViewModel(repo)
     vm.download()
     assert wait_for(lambda: vm.state == READY)
 
@@ -204,7 +212,7 @@ def test_install_opens_the_installer_and_returns_to_ready(immediate_clock):
 def test_install_failure_is_visible(immediate_clock):
     repo = FakeRepository()
     repo.install_result = False
-    vm = UpdateViewModel(repo, make_release(), "0.0.1")
+    vm = UpdateViewModel(repo)
     vm.download()
     assert wait_for(lambda: vm.state == READY)
 
@@ -216,7 +224,7 @@ def test_install_failure_is_visible(immediate_clock):
 
 def test_install_does_nothing_before_the_download_is_ready():
     repo = FakeRepository()
-    vm = UpdateViewModel(repo, make_release(), "0.0.1")
+    vm = UpdateViewModel(repo)
 
     vm.install()
 
@@ -229,7 +237,7 @@ def test_install_does_nothing_before_the_download_is_ready():
 # --------------------------------------------------------------------------- #
 def test_contributors_are_loaded_after_the_screen_exists(immediate_clock):
     repo = FakeRepository()
-    vm = UpdateViewModel(repo, make_release(), "0.0.1")
+    vm = UpdateViewModel(repo)
 
     vm.load_details()
 

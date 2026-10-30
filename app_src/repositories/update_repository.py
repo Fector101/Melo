@@ -164,8 +164,8 @@ def get_installed_version():
             installed = str(info.versionName or "").strip()
             if installed:
                 return installed
-        except Exception:
-            logger.exception("Could not read the installed version")
+        except Exception as error_getting_version_name_from_android:
+            logger.exception("Could not read the installed version: %s", error_getting_version_name_from_android)
     return APP_VERSION
 
 
@@ -556,7 +556,11 @@ class UpdateRepository:
     """A small seam over the module functions, for the view model and tests."""
 
     def check_for_update(self, installed_version=None, supported_abis=None):
-        return check_for_update(installed_version, supported_abis)
+        try:
+            return check_for_update(installed_version, supported_abis)
+        except Exception as error_checking_update:
+            logger.exception("Update check failed: %s", error_checking_update)
+            return None
 
     def get_installed_version(self):
         return get_installed_version()

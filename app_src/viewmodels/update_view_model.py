@@ -10,9 +10,9 @@ from datetime import datetime
 
 from kivy.clock import Clock
 from kivy.event import EventDispatcher
-from kivy.properties import ListProperty, NumericProperty, StringProperty
+from kivy.properties import ListProperty, NumericProperty, StringProperty, BooleanProperty
 
-from models.release import parse_highlights
+from models.release import parse_highlights, Release, ReleaseAsset
 from repositories.update_repository import (DownloadCancelled, OWNER)
 
 logger = logging.getLogger("melo.update")
@@ -56,6 +56,8 @@ class UpdateViewModel(EventDispatcher):
     updated through ``Clock.schedule_once`` so it changes on the Kivy thread.
     """
 
+    has_new_version = BooleanProperty(False)
+
     state = StringProperty(AVAILABLE)
     progress = NumericProperty(0)
     contributors = ListProperty([OWNER])
@@ -72,29 +74,36 @@ class UpdateViewModel(EventDispatcher):
     release_url = StringProperty("")
     highlights = ListProperty([])
 
-    def __init__(self, repository, release, installed_version, **kwargs):
+    def __init__(self, repository, **kwargs):
         super().__init__(**kwargs)
         self.repository = repository
-        self.release = release
         self._apk_path = None
         self._cancel_event = None
         self._download_thread = None
         self._details_thread = None
 
+        installed_version = self.repository.get_installed_version()
+        release = self.release = self.repository.check_for_update()
+        if release is None:
+            release = Release(
+                version=installed_version,
+                tag="",
+                notes="",
+                body="",
+                html_url="",
+                published_at="",
+                asset=ReleaseAsset(name="", size=0, download_url="", abi="", downloads=0, updated_at=""),
+            )
+        self.has_new_version = installed_version != release.version
         self.version = _with_v(release.version)
         self.installed = _with_v(installed_version)
         self.released = _format_date(release.published_at) or "Unknown"
         self.size_text = _format_size(release.asset.size)
-        self.downloads = int(release.asset.downloads or 0)
-        self.last_updated = (
-            _format_date(release.asset.updated_at or release.published_at)
-            or "Unknown")
+        self.downloads = release.asset.downloads
+        self.last_updated = _format_date(release.asset.updated_at or release.published_at) or "Unknown"
         self.repo = release.repo
         self.apk_type = release.asset.abi or "universal"
-        self.release_url = (
-            release.html_url
-            or f"https://github.com/{release.repo}/releases/tag/"
-               f"{release.tag or self.version}")
+        self.release_url = release.html_url or f"https://github.com/{release.repo}/releases/tag/{release.tag or self.version}"
         self.highlights = parse_highlights(release.notes or release.body)
 
     # ------------------------------------------------------------------ #
@@ -159,8 +168,8 @@ class UpdateViewModel(EventDispatcher):
         self.state = INSTALLING
         try:
             started = bool(self.repository.do_android_install(path))
-        except Exception:
-            logger.exception("Could not start the installer")
+        except Exception as error_starting_installer:
+            logger.exception("Could not start the installer: %s", error_starting_installer)
             started = False
         if started:
             self.failure_text = ""
@@ -187,19 +196,16 @@ class UpdateViewModel(EventDispatcher):
         except DownloadCancelled:
             Clock.schedule_once(lambda _dt: self._finish_cancelled(), 0)
             return
-        except Exception:
-            logger.exception("Update download failed")
+        except Exception as error_cancelling_download:
+            logger.exception("Update download failed: %s", error_cancelling_download)
             Clock.schedule_once(
-                lambda _dt: self._finish_failed(
-                    "Download failed. Check your connection and retry."), 0)
+                lambda _dt: self._finish_failed("Download failed. Check your connection and retry."), 0)
             return
 
         if path:
             Clock.schedule_once(lambda _dt: self._finish_ready(path), 0)
         else:
-            Clock.schedule_once(
-                lambda _dt: self._finish_failed(
-                    "Download failed. Check your connection and retry."), 0)
+            Clock.schedule_once( lambda _dt: self._finish_failed( "Download failed. Check your connection and retry."), 0)
 
     def _on_progress(self, percent):
         percent = max(0, min(100, int(percent)))
