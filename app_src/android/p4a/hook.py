@@ -31,12 +31,15 @@ def _inject_file_provider(manifest_path):
         content = content.replace("</application>", FILE_PROVIDER + "\n</application>")
     else:
         print(f"FileProvider already present in {manifest_path}")
+    manifest_path.write_text(content, encoding="utf-8")
 
+
+def _inject_network_xml_for_tests(manifest_path):
     if NETWORK_SECURITY_CONFIG.exists():
         if NETWORK_SECURITY_ATTRIBUTE in content:
             print(f"Network security config already present in {manifest_path}")
         else:
-            content = content.replace("<application", "<application " + NETWORK_SECURITY_ATTRIBUTE, 1)
+            content = content.replace("<application", "<application " + NETWORK_SECURITY_ATTRIBUTE)
             print(f"Enabled {NETWORK_SECURITY_CONFIG} for local HTTP testing")
     else:
         print("No network security config; keeping cleartext HTTP disabled")
@@ -48,6 +51,7 @@ def after_apk_build(toolchain):
     """p4a calls this in the dist directory, before Gradle assembles the APK."""
     manifest_path = Path(toolchain._dist.dist_dir) / "src" / "main" / "AndroidManifest.xml"
     _inject_file_provider(manifest_path)
+    _inject_network_xml_for_tests(manifest_path)
 
 
 
