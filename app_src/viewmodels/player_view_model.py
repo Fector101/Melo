@@ -71,7 +71,6 @@ class PlayerViewModel(EventDispatcher):
     # ------------------------------------------------------------------ #
     def start_ticking(self):
         """Start the progress ticker."""
-        print("start called------------------")
         if self._tick is None:
             self._tick = Clock.schedule_interval(self._on_tick, TICK_INTERVAL)
 

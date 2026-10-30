@@ -19,7 +19,6 @@ import requests
 from android_notify.config import on_android_platform
 from core.android_bridge import autoclass
 from models.release import DEFAULT_HIGHLIGHTS, Release, ReleaseAsset
-from version import __version__ as APP_VERSION
 
 logger = logging.getLogger("melo.update")
 

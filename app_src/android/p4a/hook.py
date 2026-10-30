@@ -49,9 +49,15 @@ def _inject_network_xml_for_tests(manifest_path):
 
 def after_apk_build(toolchain):
     """p4a calls this in the dist directory, before Gradle assembles the APK."""
+    print("\n\n------------------")
+    
     manifest_path = Path(toolchain._dist.dist_dir) / "src" / "main" / "AndroidManifest.xml"
     _inject_file_provider(manifest_path)
     _inject_network_xml_for_tests(manifest_path)
+    print(f"content: {manifest_path.read_text(encoding="utf-8")}")
+    
+    print("-----------------\n")
+
 
 
 

@@ -33,7 +33,7 @@ from ui.theme import BG
 from viewmodels.library_view_model import LibraryViewModel
 from viewmodels.player_view_model import PlayerViewModel
 
-android_notify_logger.setLevel(logging.DEBUG)
+android_notify_logger.setLevel(logging.WARNING)
 logger = logging.getLogger("melo")
 
 if not logging.getLogger().handlers:
