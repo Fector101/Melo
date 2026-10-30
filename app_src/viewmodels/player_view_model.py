@@ -69,12 +69,13 @@ class PlayerViewModel(EventDispatcher):
     # ------------------------------------------------------------------ #
     # Lifecycle                                                           #
     # ------------------------------------------------------------------ #
-    def start(self):
+    def start_ticking(self):
         """Start the progress ticker."""
+        print("start called------------------")
         if self._tick is None:
             self._tick = Clock.schedule_interval(self._on_tick, TICK_INTERVAL)
 
-    def stop(self):
+    def stop_ticking(self):
         """Stop the progress ticker."""
         if self._tick is not None:
             self._tick.cancel()
@@ -104,9 +105,11 @@ class PlayerViewModel(EventDispatcher):
             return
         if self._playback_repository.is_playing:
             self._playback_repository.pause()
+            self.stop_ticking()
             logger.info("pause")
         else:
             self._playback_repository.play()
+            self.start_ticking()
             logger.info("play")
         self._last_pos = self._playback_repository.get_position()
         self._playback_repository.sync_notification()
@@ -188,6 +191,7 @@ class PlayerViewModel(EventDispatcher):
             return False
         self._playback_repository.set_loop(self.loop_enabled)
         logger.info("now playing: %s (%s)", track.display_title, track.path)
+        self.start_ticking()
         self._playback_repository.play()
         self._publish_now_playing()
         self._refresh_for_current()
@@ -277,6 +281,7 @@ class PlayerViewModel(EventDispatcher):
     def _on_track_end(self, *args):
         """The engine stopped on its own: the track is over."""
         logger.info("track end callback from native stop")
+        self.start_ticking()
         
         if self.loop_enabled:
             self._restart_playing_song()
@@ -307,6 +312,10 @@ class PlayerViewModel(EventDispatcher):
         self._reset_seek_ui()
         self._playback_repository.sync_notification()
 
+    def end_operations(self):
+        """End player operations"""
+        self.stop_ticking()
+        self._playback_repository.release()
 
 def _should_prev_button_only_restart_playing_song(_playback_repository):
     """Helper to check if when previous btn is clicked, should player go to previous song or restart current song"""
