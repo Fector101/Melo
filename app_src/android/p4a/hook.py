@@ -1,4 +1,4 @@
-# For In App Updater
+# For In-App Updater
 # hook.py for FileProvider and security config
 
 from pathlib import Path
@@ -35,12 +35,12 @@ def _inject_file_provider(manifest_path):
 
 
 def _inject_network_xml_for_tests(manifest_path):
+    manifest_path = Path(manifest_path)
+    content = manifest_path.read_text(encoding="utf-8")
+
     if NETWORK_SECURITY_CONFIG.exists():
-        if NETWORK_SECURITY_ATTRIBUTE in content:
-            print(f"Network security config already present in {manifest_path}")
-        else:
-            content = content.replace("<application", "<application " + NETWORK_SECURITY_ATTRIBUTE)
-            print(f"Enabled {NETWORK_SECURITY_CONFIG} for local HTTP testing")
+        content = content.replace("<application", "<application " + NETWORK_SECURITY_ATTRIBUTE)
+        print(f"Enabled {NETWORK_SECURITY_CONFIG} for local HTTP testing")
     else:
         print("No network security config; keeping cleartext HTTP disabled")
 
