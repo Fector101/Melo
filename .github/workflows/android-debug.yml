@@ -12,7 +12,7 @@ name: Debug APK
 
 on:
   push:
-    branches: [feat/update-getter]
+    branches: [feat/updater]
   workflow_dispatch:
     inputs:
       abi:
