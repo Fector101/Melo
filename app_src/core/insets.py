@@ -12,9 +12,8 @@ Off Android every helper is a no-op and the insets stay at 0.
 
 import logging
 
-from android_notify.config import (get_python_activity_context,
-                                   on_android_platform)
 from kivy.clock import Clock
+from android_notify.config import get_python_activity_context, on_android_platform
 from core.android_bridge import PythonJavaClass, autoclass, java_method
 
 logger = logging.getLogger("melo.insets")
@@ -23,66 +22,6 @@ logger = logging.getLogger("melo.insets")
 # lifetime of the process.
 _insets_listener = None
 _insets_register = None
-
-
-def read_insets(insets):
-    """WindowInsets -> status/nav/cutout insets in **physical pixels**.
-
-    Kivy lays out in pixels on Android, so the raw values slot straight into
-    KV positions/sizes. ``getInsetsIgnoringVisibility`` keeps the padding
-    stable while a bar is temporarily hidden (immersive swipe, keyboard).
-    """
-    if autoclass("android.os.Build$VERSION").SDK_INT >= 30:
-        inset_type = autoclass("android.view.WindowInsets$Type")
-        bars = inset_type.statusBars() | inset_type.navigationBars()
-        system = insets.getInsetsIgnoringVisibility(bars)
-        top, bottom = system.top, system.bottom
-        left, right = system.left, system.right
-    else:  # API 28/29: WindowInsets.Type does not exist yet
-        top = insets.getSystemWindowInsetTop()
-        bottom = insets.getSystemWindowInsetBottom()
-        left = insets.getSystemWindowInsetLeft()
-        right = insets.getSystemWindowInsetRight()
-    try:
-        cutout = insets.getDisplayCutout()  # API 28+; None when there is none
-        if cutout is not None:
-            top = max(top, cutout.getSafeInsetTop())
-            bottom = max(bottom, cutout.getSafeInsetBottom())
-            left = max(left, cutout.getSafeInsetLeft())
-            right = max(right, cutout.getSafeInsetRight())
-    except Exception as error:
-        logger.debug("no display-cutout insets: %s", error)
-    return {"top": top, "bottom": bottom, "left": left, "right": right}
-
-
-def _resource_inset_px(dimen_name):
-    """Fallback px inset from an Android resource (before the callback fires)."""
-    try:
-        resources = get_python_activity_context().getResources()
-        res_id = resources.getIdentifier(dimen_name, "dimen", "android")
-        return int(resources.getDimensionPixelSize(res_id)) if res_id else 0
-    except Exception as error:
-        logger.debug("%s resource unavailable: %s", dimen_name, error)
-        return 0
-
-
-def _fallback_insets():
-    return {"top": _resource_inset_px("status_bar_height"),
-            "bottom": _resource_inset_px("navigation_bar_height"),
-            "left": 0, "right": 0}
-
-
-def _apply_insets(root, insets):
-    """Push insets onto the Kivy root from whichever thread reported them."""
-
-    def _set(_dt):
-        root.inset_top = insets["top"]
-        root.inset_bottom = insets["bottom"]
-        root.inset_left = insets["left"]
-        root.inset_right = insets["right"]
-
-    # Kivy properties change on Kivy's own thread
-    Clock.schedule_once(_set, 0)
 
 
 if on_android_platform() and PythonJavaClass is not None:
@@ -121,6 +60,68 @@ if on_android_platform() and PythonJavaClass is not None:
             self._decor.requestApplyInsets()
 
 
+
+def read_insets(insets):
+    """WindowInsets -> status/nav/cutout insets in **physical pixels**.
+
+    Kivy lays out in pixels on Android, so the raw values slot straight into
+    KV positions/sizes. ``getInsetsIgnoringVisibility`` keeps the padding
+    stable while a bar is temporarily hidden (immersive swipe, keyboard).
+    """
+    if autoclass("android.os.Build$VERSION").SDK_INT < 35:
+        return {"top": 0, "bottom": 0, "left": 0, "right": 0}
+
+    inset_type = autoclass("android.view.WindowInsets$Type")
+    bars = inset_type.statusBars() | inset_type.navigationBars()
+    system = insets.getInsetsIgnoringVisibility(bars)
+    top, bottom = system.top, system.bottom
+    left, right = system.left, system.right
+
+    try:
+        cutout = insets.getDisplayCutout()
+        if cutout is not None:
+            top = max(top, cutout.getSafeInsetTop())
+            bottom = max(bottom, cutout.getSafeInsetBottom())
+            left = max(left, cutout.getSafeInsetLeft())
+            right = max(right, cutout.getSafeInsetRight())
+        else:
+            logger.warning("cutout is None")
+    except Exception as error:
+        logger.debug("no display-cutout insets: %s", error)
+    return {"top": top, "bottom": bottom, "left": left, "right": right}
+
+
+def _resource_inset_px(dimen_name):
+    """Fallback px inset from an Android resource (before the callback fires)."""
+    try:
+        resources = get_python_activity_context().getResources()
+        res_id = resources.getIdentifier(dimen_name, "dimen", "android")
+        d=int(resources.getDimensionPixelSize(res_id)) if res_id else 0
+        print(f"dim: {d}")
+        return d
+    except Exception as error:
+        logger.debug("%s resource unavailable: %s", dimen_name, error)
+        return 0
+
+
+def _fallback_insets():
+    return {"top": _resource_inset_px("status_bar_height"),
+            "bottom": _resource_inset_px("navigation_bar_height"),
+            "left": 0, "right": 0}
+
+
+def _apply_insets(root, insets):
+    """Push insets onto the Kivy root from whichever thread reported them."""
+
+    def _set(_dt):
+        root.inset_top = insets["top"]
+        root.inset_bottom = insets["bottom"]
+        root.inset_left = insets["left"]
+        root.inset_right = insets["right"]
+
+    Clock.schedule_once(_set, 0)
+
+
 def attach_insets(root):
     """Keep ``root``'s inset properties in sync with the real system bars.
 
@@ -130,7 +131,7 @@ def attach_insets(root):
     """
     global _insets_listener, _insets_register
 
-    if not on_android_platform():
+    if not on_android_platform() or autoclass("android.os.Build$VERSION").SDK_INT < 35:
         return
     try:
         activity = get_python_activity_context()

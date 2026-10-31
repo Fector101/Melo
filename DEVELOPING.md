@@ -57,6 +57,23 @@ What the build does:
 | `android.permissions` | `INTERNET`, `POST_NOTIFICATIONS`, `READ_MEDIA_AUDIO` (+ legacy `READ_EXTERNAL_STORAGE` up to API 32) |
 | `android.gradle_dependencies` | `android-notify-music-bridge` - helps send the media notification clicks to Python callback functions |
 
+Without a local toolchain, `.github/workflows/android-debug.yml` builds debug
+APKs on GitHub: *Actions → Debug APK → Run workflow*, pick an ABI (`all` runs
+both). Each job uploads `melo-debug-<arch>` with
+`melo-<version>-<arch>-debug-<sha>.apk`, its `.sha256`, and a `build-info.txt`.
+Nothing is tagged or published.
+
+- A cold run is ~25-35 min. The Android SDK/NDK are cached; the p4a dist is
+  not, because the spec builds `kivy==master` and `p4a.branch=develop` and a
+  cached dist would pin whatever those were when the cache was written.
+- The APK is signed with the runner's own debug key, so it will **not** install
+  over a locally built debug APK (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`).
+  Uninstall first, or add a `DEBUG_KEYSTORE_BASE64` repository secret holding
+  base64 of your `~/.android/debug.keystore` so both machines share a key.
+- Tick `cleartext` to inject the gitignored `network_security_config.xml` into
+  the build, which is what lets `scripts/device_self_update_test.py` talk to a
+  laptop-hosted release server. Leave it off otherwise.
+
 ---
 
 ## 3. The architecture

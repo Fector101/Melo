@@ -1,0 +1,221 @@
+name: Debug APK
+
+# Manual debug builds for putting a branch on a phone.
+#
+# Unlike the release workflow this needs no keystore secrets: buildozer signs a
+# debug APK with the runner's own debug key. Set a DEBUG_KEYSTORE_BASE64 secret
+# (base64 of your local ~/.android/debug.keystore) if you also build locally -
+# otherwise a CI APK cannot be installed over a locally built one
+# (INSTALL_FAILED_UPDATE_INCOMPATIBLE) and the app has to be uninstalled first.
+#
+# Nothing here publishes: no tag, no release, just artifacts that expire.
+
+on:
+  push:
+    branches: [feat/updater]
+  workflow_dispatch:
+    inputs:
+      abi:
+        description: ABI to build
+        type: choice
+        options:
+          - all
+          - arm64-v8a
+          - armeabi-v7a
+        default: all
+      cleartext:
+        description: Allow plain HTTP (needed by scripts/device_self_update_test.py)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: debug-${{ github.ref }}-${{ inputs.abi }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Debug ${{ matrix.arch }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        # "all" builds both ABIs as separate, smaller APKs, one per job.
+        arch: ${{ fromJSON(inputs.abi == 'all' && '["arm64-v8a","armeabi-v7a"]' || format('["{0}"]', inputs.abi)) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show what is being built
+        run: |
+          set -euo pipefail
+          echo "ref:     ${GITHUB_REF_NAME} (${GITHUB_SHA:0:7})"
+          echo "arch:    ${{ matrix.arch }}"
+          grep -E '^(version|android\.archs|requirements|p4a\.branch)' buildozer.spec || true
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            git zip unzip python3-pip \
+            autoconf automake libtool libltdl-dev pkg-config \
+            zlib1g-dev libncurses-dev libtinfo6 cmake \
+            libffi-dev libssl-dev libjpeg-dev libpng-dev wget
+
+      - name: Add local bin to PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Setup Python + Buildozer
+        run: |
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install buildozer==1.6.0 \
+            Cython==0.29.34 legacy-cgi setuptools
+
+      # Only the SDK/NDK are cached. The p4a dist is deliberately *not*: the
+      # spec builds against kivy==master and p4a.branch=develop, so a cached
+      # dist would pin whatever those were on the day the cache was written.
+      # A miss costs ~20-30 min, a stale dist costs a confusing bug.
+      - name: Cache the Android SDK and NDK
+        uses: actions/cache@v4
+        with:
+          path: ~/.buildozer/android/platform/android-sdk
+          key: android-sdk-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+          restore-keys: |
+            android-sdk-${{ runner.os }}-
+
+      - name: Prepare Android SDK folder
+        run: mkdir -p ~/.buildozer/android/platform/android-sdk
+
+      - name: Install Android cmdline tools
+        run: |
+          set -euo pipefail
+          SDK="$HOME/.buildozer/android/platform/android-sdk"
+          if [ -x "$SDK/cmdline-tools/latest/bin/sdkmanager" ]; then
+            echo "cmdline-tools already present (cache hit)"
+            exit 0
+          fi
+          cd "$SDK"
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q commandlinetools-linux-*.zip
+          rm -rf cmdline-tools/latest
+          mkdir -p cmdline-tools/latest
+          mv cmdline-tools/bin cmdline-tools/lib \
+            cmdline-tools/NOTICE.txt cmdline-tools/source.properties \
+            cmdline-tools/latest/
+          rm -f commandlinetools-linux-*.zip
+          mkdir -p tools/bin
+          ln -sf "$SDK/cmdline-tools/latest/bin/sdkmanager" tools/bin/sdkmanager
+          ln -sf "$SDK/cmdline-tools/latest/bin/avdmanager" tools/bin/avdmanager
+
+      - name: Accept Android licenses
+        run: yes | ~/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager --licenses
+
+      - name: Use the shared debug keystore (optional)
+        env:
+          DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DEBUG_KEYSTORE_BASE64}" ]; then
+            echo "::notice::No DEBUG_KEYSTORE_BASE64 secret - buildozer will generate a key on this runner, so this APK will not install over a locally built debug APK (uninstall first)."
+            exit 0
+          fi
+          mkdir -p "$HOME/.android"
+          printf '%s' "${DEBUG_KEYSTORE_BASE64}" | base64 -d > "$HOME/.android/debug.keystore"
+          echo "Restored the shared debug keystore."
+
+      # Opt-in, and never committed: the p4a hook only injects the attribute
+      # when the file exists, which is how a clean checkout (CI/release) keeps
+      # cleartext HTTP disabled. Needed only for the laptop-hosted release test.
+      - name: Allow cleartext HTTP
+        if: ${{ inputs.cleartext }}
+        run: |
+          cat > app_src/android/res/xml/network_security_config.xml <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <network-security-config>
+              <base-config cleartextTrafficPermitted="true" />
+          </network-security-config>
+          XML
+          echo "Cleartext HTTP enabled in this debug APK."
+
+      - name: Build the debug APK
+        run: |
+          source venv/bin/activate
+          buildozer --profile "${{ matrix.arch }}" android debug
+
+      - name: Verify the APK
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          APK=$(find bin -name "*-${ARCH}-debug.apk" -print -quit)
+          test -n "${APK}"
+          BUILD_TOOLS=$(ls -d "$HOME"/.buildozer/android/platform/android-sdk/build-tools/* | sort -V | tail -n1)
+          echo "APK: ${APK} ($(du -h "${APK}" | cut -f1))"
+          "${BUILD_TOOLS}/apksigner" verify --print-certs "${APK}"
+          "${BUILD_TOOLS}/aapt" dump badging "${APK}" \
+            | grep -E '^(package|application-label|native-code|sdkVersion|targetSdkVersion):' || true
+
+      - name: Collect artifacts
+        id: package
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          APK=$(find bin -name "*-${ARCH}-debug.apk" -print -quit)
+          test -n "${APK}"
+          VERSION=$(grep -Po '^version\s*=\s*\K\S+' buildozer.spec)
+          NAME="melo-${VERSION}-${ARCH}-debug-${GITHUB_SHA:0:7}.apk"
+          mkdir -p dist
+          cp "${APK}" "dist/${NAME}"
+          (cd dist && sha256sum "${NAME}" > "${NAME}.sha256")
+          cat > dist/build-info.txt <<EOF
+          commit:  ${GITHUB_SHA}
+          ref:     ${GITHUB_REF_NAME}
+          version: ${VERSION}
+          arch:    ${ARCH}
+          cleartext-http: ${{ inputs.cleartext }}
+          run:     ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          EOF
+          ls -lh dist
+          echo "name=${NAME}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload the debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: melo-debug-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Summarize
+        env:
+          NAME: ${{ steps.package.outputs.name }}
+          VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### Debug APK: ${{ matrix.arch }}"
+            echo
+            echo "- commit: \`${GITHUB_SHA:0:7}\` on \`${GITHUB_REF_NAME}\`"
+            echo "- version: \`${VERSION}\`"
+            echo "- file: \`${NAME}\`"
+            echo "- cleartext HTTP: \`${{ inputs.cleartext }}\`"
+            echo
+            echo "Download it from the **Artifacts** section of this run, then:"
+            echo
+            echo '```'
+            echo "adb install -r ${NAME}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

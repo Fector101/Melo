@@ -1,0 +1,174 @@
+name: Release
+
+# Tag a commit as v<version> only after buildozer.spec and app_src/version.py
+# agree. The tag is what the app reads the release notes from, so a mismatch
+# would ship an APK that advertises a version it cannot update from.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify the version
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check the tag, the spec, and version.py
+        id: version
+        run: |
+          set -euo pipefail
+          SPEC_VERSION=$(grep -Po '^version\s*=\s*\K\S+' buildozer.spec)
+          APP_VERSION=$(grep -Po '^__version__\s*=\s*"\K[^"]+' app_src/version.py)
+          NOTE=".github/version-notes/release-note-v${SPEC_VERSION}.txt"
+
+          echo "Tag:        ${GITHUB_REF_NAME}"
+          echo "Spec:       ${SPEC_VERSION}"
+          echo "version.py: ${APP_VERSION}"
+
+          test "${GITHUB_REF_NAME}" = "v${SPEC_VERSION}"
+          test "${APP_VERSION}" = "${SPEC_VERSION}"
+          test -f "${NOTE}"
+
+          echo "version=${SPEC_VERSION}" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.arch }}
+    needs: verify
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - arm64-v8a
+          - armeabi-v7a
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            git zip unzip python3-pip \
+            autoconf automake libtool libltdl-dev pkg-config \
+            zlib1g-dev libncurses-dev libtinfo6 cmake \
+            libffi-dev libssl-dev libjpeg-dev libpng-dev wget
+
+      - name: Add local bin to PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Setup Python + Buildozer
+        run: |
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install buildozer==1.6.0 \
+            Cython==0.29.34 legacy-cgi setuptools
+
+      - name: Prepare Android SDK folder
+        run: mkdir -p ~/.buildozer/android/platform/android-sdk
+
+      - name: Install Android cmdline tools
+        run: |
+          set -euo pipefail
+          SDK="$HOME/.buildozer/android/platform/android-sdk"
+          cd "$SDK"
+          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q commandlinetools-linux-*.zip
+          rm -rf cmdline-tools/latest
+          mkdir -p cmdline-tools/latest
+          mv cmdline-tools/bin cmdline-tools/lib \
+            cmdline-tools/NOTICE.txt cmdline-tools/source.properties \
+            cmdline-tools/latest/
+          mkdir -p tools/bin
+          ln -sf "$SDK/cmdline-tools/latest/bin/sdkmanager" tools/bin/sdkmanager
+          ln -sf "$SDK/cmdline-tools/latest/bin/avdmanager" tools/bin/avdmanager
+
+      - name: Accept Android licenses
+        run: yes | ~/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager --licenses
+
+      - name: Build the release APK
+        run: |
+          source venv/bin/activate
+          buildozer --profile "${{ matrix.arch }}" android release
+
+      - name: Sign and verify the APK
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+          ARCH: ${{ matrix.arch }}
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          ALIAS_NAME: ${{ secrets.ALIAS_NAME }}
+          KS_PASS: ${{ secrets.KS_PASS }}
+          KEY_PASS: ${{ secrets.KEY_PASS }}
+        run: |
+          set -euo pipefail
+
+          APK=$(find bin -name '*-release-unsigned.apk' -print -quit)
+          test -n "${APK}"
+
+          BUILD_TOOLS=$(ls -d "$HOME"/.buildozer/android/platform/android-sdk/build-tools/* | sort -V | tail -n1)
+          KEYSTORE="${RUNNER_TEMP}/release.jks"
+          printf '%s' "${KEYSTORE_BASE64}" | base64 -d > "${KEYSTORE}"
+
+          FINAL="bin/melo-v${VERSION}-${ARCH}.apk"
+          "${BUILD_TOOLS}/zipalign" -f -p 4 "${APK}" "bin/aligned-${ARCH}.apk"
+          "${BUILD_TOOLS}/apksigner" sign \
+            --ks "${KEYSTORE}" \
+            --ks-key-alias "${ALIAS_NAME}" \
+            --ks-pass "pass:${KS_PASS}" \
+            --key-pass "pass:${KEY_PASS}" \
+            --out "${FINAL}" \
+            "bin/aligned-${ARCH}.apk"
+
+          "${BUILD_TOOLS}/apksigner" verify --verbose "${FINAL}"
+          "${BUILD_TOOLS}/zipalign" -c -p 4 "${FINAL}"
+          rm -f "${KEYSTORE}"
+
+      - name: Upload the APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: melo-${{ matrix.arch }}
+          path: bin/melo-v${{ needs.verify.outputs.version }}-${{ matrix.arch }}.apk
+          if-no-files-found: error
+
+  publish:
+    name: Publish the release
+    needs: [verify, build]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download both APKs
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Show the assets
+        run: ls -lh dist
+
+      - name: Create the GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Melo v${{ needs.verify.outputs.version }}
+          body_path: .github/version-notes/release-note-v${{ needs.verify.outputs.version }}.txt
+          files: dist/*.apk
+          fail_on_unmatched_files: true

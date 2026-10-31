@@ -1,5 +1,10 @@
 android_notify/
+scripts/
 .*/
+# The GitHub workflow and the version notes it publishes are part of the
+# source tree; the broad hidden-directory rule above would hide them.
+!.github/
+!.github/**
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -198,6 +203,16 @@ cython_debug/
 #   Ignore directories containing user credentials, local state, and settings.
 #   Learn more at https://abstra.io/docs
 .abstra/
+
+# Local updater testing: points a debug build at a laptop-hosted release
+# server. Keep both out of the repo; CI and release builds never see them.
+update_endpoint.json
+app_src/android/res/xml/network_security_config.xml
+
+# Release signing material and local build output.
+*.jks
+*.keystore
+bin/
 
 # Visual Studio Code
 #   Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore that
