@@ -165,7 +165,7 @@ def get_installed_version():
                 return installed
         except Exception as error_getting_version_name_from_android:
             logger.exception("Could not read the installed version: %s", error_getting_version_name_from_android)
-    return APP_VERSION
+    return "APP_VERSION"
 
 
 def get_supported_abis():

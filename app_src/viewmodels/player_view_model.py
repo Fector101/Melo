@@ -192,8 +192,8 @@ class PlayerViewModel(EventDispatcher):
         logger.info("now playing: %s (%s)", track.display_title, track.path)
         self.start_ticking()
         self._playback_repository.play()
-        self._publish_now_playing()
         self._refresh_for_current()
+        self._publish_now_playing()
         return True
 
     def _publish_now_playing(self):

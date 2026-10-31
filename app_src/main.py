@@ -37,7 +37,7 @@ android_notify_logger.setLevel(logging.WARNING)
 logger = logging.getLogger("melo")
 
 if not logging.getLogger().handlers:
-    logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+    logging.basicConfig(level=logging.WARNING, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
 if platform not in ("android", "ios"):
     Window.size = (390, 740)
