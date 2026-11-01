@@ -32,7 +32,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: debug-${{ github.ref }}-${{ inputs.abi }}
+  # `inputs.abi` is empty on push, so fall back to "all" there too.
+  group: debug-${{ github.ref }}-${{ inputs.abi || 'all' }}
   cancel-in-progress: true
 
 jobs:
@@ -44,7 +45,11 @@ jobs:
       fail-fast: false
       matrix:
         # "all" builds both ABIs as separate, smaller APKs, one per job.
-        arch: ${{ fromJSON(inputs.abi == 'all' && '["arm64-v8a","armeabi-v7a"]' || format('["{0}"]', inputs.abi)) }}
+        # `inputs.abi` is empty on a push event (the inputs only exist for
+        # workflow_dispatch), and an empty arch silently makes
+        # `buildozer --profile ""` build *all* archs into one APK whose name
+        # then matches no "*-<arch>-debug.apk" pattern. Default to "all".
+        arch: ${{ fromJSON((inputs.abi || 'all') == 'all' && '["arm64-v8a","armeabi-v7a"]' || format('["{0}"]', inputs.abi)) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -150,6 +155,8 @@ jobs:
 
       - name: Build the debug APK
         run: |
+          set -euo pipefail
+          test -n "${{ matrix.arch }}"
           source venv/bin/activate
           buildozer --profile "${{ matrix.arch }}" android debug
 
@@ -159,7 +166,11 @@ jobs:
         run: |
           set -euo pipefail
           APK=$(find bin -name "*-${ARCH}-debug.apk" -print -quit)
-          test -n "${APK}"
+          if [ -z "${APK}" ]; then
+            echo "::error::No APK matching bin/*-${ARCH}-debug.apk. bin/ contains:"
+            ls -lh bin || true
+            exit 1
+          fi
           BUILD_TOOLS=$(ls -d "$HOME"/.buildozer/android/platform/android-sdk/build-tools/* | sort -V | tail -n1)
           echo "APK: ${APK} ($(du -h "${APK}" | cut -f1))"
           "${BUILD_TOOLS}/apksigner" verify --print-certs "${APK}"
@@ -173,7 +184,11 @@ jobs:
         run: |
           set -euo pipefail
           APK=$(find bin -name "*-${ARCH}-debug.apk" -print -quit)
-          test -n "${APK}"
+          if [ -z "${APK}" ]; then
+            echo "::error::No APK matching bin/*-${ARCH}-debug.apk. bin/ contains:"
+            ls -lh bin || true
+            exit 1
+          fi
           VERSION=$(grep -Po '^version\s*=\s*\K\S+' buildozer.spec)
           NAME="melo-${VERSION}-${ARCH}-debug-${GITHUB_SHA:0:7}.apk"
           mkdir -p dist
