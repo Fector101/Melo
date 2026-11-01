@@ -20,7 +20,7 @@ osx.kivy_version = 1.9.1
 
 
 fullscreen = 0
-orientation = all
+orientation = portrait
 android.permissions = INTERNET, POST_NOTIFICATIONS, (name=android.permission.READ_EXTERNAL_STORAGE;maxSdkVersion=32), READ_MEDIA_AUDIO, REQUEST_INSTALL_PACKAGES, android.permission.WAKE_LOCK
 
 
