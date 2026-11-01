@@ -1,6 +1,8 @@
 """The update repository and release model: no Kivy, no device needed."""
 
 import json
+import re
+from pathlib import Path
 
 import pytest
 import requests
@@ -457,6 +459,16 @@ def test_installing_returns_false_when_both_paths_fail(tmp_path, monkeypatch):
     monkeypatch.setattr(updater, "install_apk", fail)
 
     assert updater.do_android_install(str(path)) is False
+
+
+def test_the_desktop_version_comes_from_buildozer_spec():
+    """There is no Python version file any more; the spec is the source."""
+    spec = (Path(__file__).resolve().parent.parent / "buildozer.spec").read_text(
+        encoding="utf-8")
+    expected = re.search(r"^version\s*=\s*(\S+)", spec, re.MULTILINE).group(1)
+
+    assert updater._version_from_buildozer_spec() == expected
+    assert updater.get_installed_version() == expected
 
 
 # --------------------------------------------------------------------------- #

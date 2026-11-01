@@ -1,7 +1,9 @@
 name: Release
 
-# Tag a commit as v<version> only after buildozer.spec and app_src/version.py
-# agree. The tag is what the app reads the release notes from, so a mismatch
+# Tag a commit as v<version> after buildozer.spec's version is bumped.
+# buildozer.spec is the single source of truth: it becomes the APK's
+# versionName, which is what the app compares against the release tag.
+# The tag is what the app reads the release notes from, so a mismatch
 # would ship an APK that advertises a version it cannot update from.
 on:
   push:
@@ -21,20 +23,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check the tag, the spec, and version.py
+      - name: Check the tag against the spec
         id: version
         run: |
           set -euo pipefail
           SPEC_VERSION=$(grep -Po '^version\s*=\s*\K\S+' buildozer.spec)
-          APP_VERSION=$(grep -Po '^__version__\s*=\s*"\K[^"]+' app_src/version.py)
           NOTE=".github/version-notes/release-note-v${SPEC_VERSION}.txt"
 
-          echo "Tag:        ${GITHUB_REF_NAME}"
-          echo "Spec:       ${SPEC_VERSION}"
-          echo "version.py: ${APP_VERSION}"
+          echo "Tag:  ${GITHUB_REF_NAME}"
+          echo "Spec: ${SPEC_VERSION}"
 
           test "${GITHUB_REF_NAME}" = "v${SPEC_VERSION}"
-          test "${APP_VERSION}" = "${SPEC_VERSION}"
           test -f "${NOTE}"
 
           echo "version=${SPEC_VERSION}" >> "$GITHUB_OUTPUT"

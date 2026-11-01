@@ -23,9 +23,10 @@ orientation = portrait
 android.permissions = INTERNET, POST_NOTIFICATIONS, (name=android.permission.READ_EXTERNAL_STORAGE;maxSdkVersion=32), READ_MEDIA_AUDIO, REQUEST_INSTALL_PACKAGES, android.permission.WAKE_LOCK
 
 
-android.gradle_dependencies = androidx.core:core:1.12.0, io.github.fector101:android-notify-music-bridge:1.0.1
+android.gradle_dependencies = androidx.core:core:1.12.0, androidx.work:work-runtime:2.9.0, io.github.fector101:android-notify-music-bridge:1.0.1
 android.enable_androidx = True
 android.add_resources = %(source.dir)s/android/res
+android.add_src = %(source.dir)s/android/src
 p4a.hook = %(source.dir)s/android/p4a/hook.py
 
 

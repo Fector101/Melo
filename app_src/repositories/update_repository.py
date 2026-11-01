@@ -152,7 +152,11 @@ def is_newer(latest, installed):
 
 
 def get_installed_version():
-    """The version Android installed, or the Python version off Android."""
+    """The version Android installed, or the ``buildozer.spec`` version off Android.
+
+    Android exposes the APK's ``versionName`` (set from buildozer.spec), so the
+    source of truth is the build: there is no separate Python version file.
+    """
     if on_android_platform():
         try:
             from android import mActivity  # type: ignore
@@ -165,7 +169,26 @@ def get_installed_version():
                 return installed
         except Exception as error_getting_version_name_from_android:
             logger.exception("Could not read the installed version: %s", error_getting_version_name_from_android)
-    return "APP_VERSION"
+    return _version_from_buildozer_spec()
+
+
+def _version_from_buildozer_spec():
+    """Read ``version`` from the checkout's buildozer.spec (desktop only).
+
+    Returns ``""`` inside an APK, where that file does not exist; the Android
+    branch above never reaches this fallback anyway.
+    """
+    try:
+        from pathlib import Path
+
+        spec = Path(__file__).resolve().parents[2] / "buildozer.spec"
+        for line in spec.read_text(encoding="utf-8").splitlines():
+            match = re.match(r"^version\s*=\s*(\S+)", line)
+            if match:
+                return match.group(1)
+    except Exception:
+        logger.exception("Could not read the version from buildozer.spec")
+    return ""
 
 
 def get_supported_abis():

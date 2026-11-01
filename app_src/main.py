@@ -27,6 +27,10 @@ from repositories.artwork_repository import ArtworkRepository
 from repositories.library_repository import LibraryRepository
 from repositories.permissions_repository import PermissionsRepository
 from repositories.playback_repository import PlaybackRepository
+from repositories.update_notification_repository import (bind_update_intents,
+                                                         cancel_notification,
+                                                         read_update_intent,
+                                                         schedule_background_check)
 from ui import load_kv_files
 from ui.screens.library_screen import LibraryScreen
 from ui.theme import BG
@@ -62,6 +66,7 @@ class MeloApp(App):
         self._update_screen = None
         self._update_chip = None
         self._update_chip_class = None
+        self._update_check_in_flight = False
 
     def build(self):
         Window.clearcolor = BG
@@ -105,6 +110,49 @@ class MeloApp(App):
     def _start(self, _dt):
         logger.info("starting: request audio permission")
         self.library_view_model.scan()
+        self._ask_for_notification_permission()
+        self._start_update_notifications()
+
+    def _start_update_notifications(self):
+        """Schedule the Java background check and listen for its tap."""
+        if platform != "android":
+            return
+        schedule_background_check()
+        bind_update_intents(self._on_update_intent)
+        # A tap that launched a cold start is read once the UI exists.
+        Clock.schedule_once(self._consume_launch_update_intent, 1.5)
+
+    def _ask_for_notification_permission(self):
+        """Ask for POST_NOTIFICATIONS once, never on top of the audio dialog."""
+        try:
+            if self.permissions_repository.has_notification_access():
+                return
+            marker = os.path.join(self.user_data_dir, ".notification_permission_asked")
+            if os.path.exists(marker):
+                return
+            if not self.permissions_repository.has_audio_access():
+                # The first-launch audio dialog owns the screen; ask next launch.
+                return
+            self.permissions_repository.request_notification_access()
+            with open(marker, "w", encoding="utf-8") as handle:
+                handle.write("1")
+        except Exception:
+            logger.exception("Could not ask for notification permission")
+
+    def _consume_launch_update_intent(self, _dt):
+        payload = read_update_intent()
+        if payload:
+            self._on_update_intent(payload)
+
+    def _on_update_intent(self, payload):
+        """The user tapped the background update notification."""
+        if not payload:
+            return
+        logger.info("Update notification tapped: %s", payload)
+        if self._update_view_model is not None and self._update_view_model.has_new_version:
+            Clock.schedule_once(lambda _dt: self._show_update_screen(), 0)
+            return
+        threading.Thread(target=self._check_updates, daemon=True).start()
 
     def _check_updates_later(self, _dt):
         """Run the update check off the UI thread, after startup settles."""
@@ -113,16 +161,27 @@ class MeloApp(App):
 
     def _check_updates(self):
         """Build and open the update screen if new version exists (only once, then reuse it)."""
-        from viewmodels.update_view_model import UpdateViewModel
-        from repositories.update_repository import UpdateRepository
+        if self._update_check_in_flight:
+            return
+        self._update_check_in_flight = True
+        try:
+            from viewmodels.update_view_model import UpdateViewModel
+            from repositories.update_repository import UpdateRepository
 
-        self._update_repository = UpdateRepository()
-        self._update_view_model = UpdateViewModel(self._update_repository)
+            self._update_repository = UpdateRepository()
+            self._update_view_model = UpdateViewModel(self._update_repository)
 
-        if self._update_view_model.has_new_version:
-            Clock.schedule_once(lambda _dt: self._show_update_screen(), 0)
+            if self._update_view_model.has_new_version:
+                Clock.schedule_once(lambda _dt: self._show_update_screen(), 0)
+        finally:
+            self._update_check_in_flight = False
 
     def _show_update_screen(self):
+        cancel_notification()
+        if self._update_screen is not None:
+            self._update_screen.open()
+            self._remove_update_chip()
+            return
         try:
             from ui.screens.update_screen import UpdateScreen
             self._update_screen = UpdateScreen(self._update_view_model)
@@ -155,6 +214,7 @@ class MeloApp(App):
             self._update_chip = None
 
     def _open_update_screen(self):
+        cancel_notification()
         self._remove_update_chip()
         self._update_screen.open()
 
