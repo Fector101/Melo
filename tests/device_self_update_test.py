@@ -160,6 +160,11 @@ class FakeRelease:
         self._server.server_close()
 
     # -- data ------------------------------------------------------------ #
+    def set_version(self, version: str) -> str:
+        """Advertise another tag; the same server is reused across scenarios."""
+        self.tag = "v" + version.lstrip("v")
+        return self.tag
+
     def release(self) -> dict:
         assets = [
             {
@@ -203,7 +208,6 @@ class FakeRelease:
              "at": time.time()})
 
     def _handler(self):
-        payload = json.dumps(self.release()).encode()
         outer = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -215,6 +219,8 @@ class FakeRelease:
             def do_GET(self):  # noqa: N802 - http.server API
                 path = self.path.split("?", 1)[0].rstrip("/")
                 if path == "/releases/latest":
+                    # Built per request: the test switches the advertised tag.
+                    payload = json.dumps(outer.release()).encode()
                     outer._record(path, "", 200)
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")

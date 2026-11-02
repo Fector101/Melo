@@ -51,11 +51,13 @@ adb shell dumpsys jobscheduler | grep melo
 adb shell dumpsys notification --noredact | grep -A5 update_channel
 ```
 
-Reset the 7-day cooldown (this also deletes the endpoint file and app data, so
-re-run the endpoint push and `pm grant` afterwards):
+Reset the 7-day cooldown without wiping app data (a `pm clear` would also drop
+the endpoint file and `POST_NOTIFICATIONS`; a force-stop is still needed to drop
+the old notification):
 
 ```shell
-adb shell pm clear $PKG
+adb shell "run-as $PKG rm -f shared_prefs/update_checker_prefs.xml" && \
+adb shell am force-stop $PKG
 ```
 
 Drive the tap path without waiting for a notification:
@@ -64,6 +66,52 @@ Drive the tap path without waiting for a notification:
 adb shell am start -n $PKG/org.kivy.android.PythonActivity \
   --es action open_update --es version 0.0.2
 ```
+
+## Device test: background update notification
+
+`tests/device_update_notification_test.py` runs the whole thing end to end
+against the installed build: fake release server, endpoint push + cooldown
+reset, foreground skip, WorkManager job/spec check, "not newer",
+background notification, shade tap (`uiautomator`) opening the update screen,
+and the cooldown. It deletes `files/update_endpoint.json` and
+`shared_prefs/update_checker_prefs.xml` at start and end (never `pm clear`),
+so it does not leave the app in a cooldown state.
+
+```shell
+cd /home/fabian/Documents/Melo
+venv/bin/python tests/device_update_notification_test.py            # real shade tap
+venv/bin/python tests/device_update_notification_test.py --intent-tap  # fallback
+venv/bin/python tests/device_update_notification_test.py --keep     # leave state for poking
+```
+
+Needs the same debug install + cleartext `network_security_config.xml` build as
+the self-update test, `POST_NOTIFICATIONS` granted (the script grants it), and an
+awake phone. Two failure modes that look like "the check never ran":
+
+- **`java.io.IOException: Cleartext HTTP traffic to 127.0.0.1 not permitted`** in
+  `adb logcat -s UpdateNotifier` means the installed APK was built without
+  `app_src/android/res/xml/network_security_config.xml` (the Java side uses
+  `HttpURLConnection`, which honours the policy; Python's sockets do not). Check
+  with `unzip -l <apk> | grep network_security_config` before blaming the code.
+- **`INSTALL_FAILED_UPDATE_INCOMPATIBLE: signatures do not match`** means the
+  phone has a Melo signed with another key; `adb install -r` cannot replace it,
+  uninstall first (that also drops the endpoint file and the permission, which
+  the script sets up again).
+
+MIUI ignores `cmd statusbar expand-notifications` sometimes (the script falls
+back to a swipe), and `uiautomator dump` happily leaves a stale file behind when
+the shade is animating - the script deletes the file first, waits for two
+identical dumps and taps the card's clickable row, not the text. Notifications
+are read from `dumpsys notification --noredact` filtered to `id=999` /
+`channel=update_channel` (Melo's media notification would otherwise match
+"Melo"). The WorkManager periodic interval is *not* a JobScheduler `PERIODIC:`
+row: read `interval_duration` from `no_backup/androidx.work.workdb`.
+
+MIUI/Doze can defer the 5 s override check, so the waits are 60 s; if a run
+stalls, retry with `--timeout-scale 3` rather than assuming a code bug.
+
+`--version` (default `0.0.2`) is the release the fake server serves; it must be
+newer than the installed `versionName` for the notification scenarios.
 
 ## Important for track trace
 ```python
