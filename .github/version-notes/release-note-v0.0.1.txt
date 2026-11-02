@@ -8,3 +8,5 @@ The first release of Melo.
 - An update screen that picks the build for your phone and shows what changed.
 
 Thanks to everyone who tried Melo and reported what felt wrong.
+
+~ The party never ends.
