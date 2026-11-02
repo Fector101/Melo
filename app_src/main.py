@@ -108,10 +108,13 @@ class MeloApp(App):
 
     @mainthread
     def _start(self, _dt):
-        logger.info("starting: request audio permission")
-        self.library_view_model.scan()
-        self._ask_for_notification_permission()
+        logger.info("starting: request permissions")
+        self.permissions_repository.request_notification_access(callback=self.__ask_for_audio_permission_and_scan)
         self._start_update_notifications()
+
+
+    def __ask_for_audio_permission_and_scan(self,*args):
+        self.permissions_repository.request_audio_access(callback=lambda *_: self.library_view_model.scan())
 
     def _start_update_notifications(self):
         """Schedule the Java background check and listen for its tap."""
@@ -122,22 +125,6 @@ class MeloApp(App):
         # A tap that launched a cold start is read once the UI exists.
         Clock.schedule_once(self._consume_launch_update_intent, 1.5)
 
-    def _ask_for_notification_permission(self):
-        """Ask for POST_NOTIFICATIONS once, never on top of the audio dialog."""
-        try:
-            if self.permissions_repository.has_notification_access():
-                return
-            marker = os.path.join(self.user_data_dir, ".notification_permission_asked")
-            if os.path.exists(marker):
-                return
-            if not self.permissions_repository.has_audio_access():
-                # The first-launch audio dialog owns the screen; ask next launch.
-                return
-            self.permissions_repository.request_notification_access()
-            with open(marker, "w", encoding="utf-8") as handle:
-                handle.write("1")
-        except Exception:
-            logger.exception("Could not ask for notification permission")
 
     def _consume_launch_update_intent(self, _dt):
         payload = read_update_intent()
