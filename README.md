@@ -1,5 +1,5 @@
 # Melo
-**A Fast light weight Music player for android built python.**
+**A fast, lightweight music player for Android, built with Python.**
 
 [![Release](https://github.com/Fector101/Melo/actions/workflows/android-release.yml/badge.svg)](https://github.com/Fector101/Melo/actions/workflows/android-release.yml)
 [![Debug APK](https://github.com/Fector101/Melo/actions/workflows/android-debug.yml/badge.svg)](https://github.com/Fector101/Melo/actions/workflows/android-debug.yml)
