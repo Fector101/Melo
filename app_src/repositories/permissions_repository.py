@@ -6,7 +6,9 @@ import logging
 
 logger = logging.getLogger("melo.permissions")
 
-from android_notify.internal.permissions import is_music_permission_in_manifest
+from android_notify.internal.permissions import (ask_notification_permission,
+                                                 has_notification_permission,
+                                                 is_music_permission_in_manifest)
 from android_notify.media.music.helper import MediaPermissionHandler
 
 
@@ -39,3 +41,18 @@ class PermissionsRepository:
         #     callback(True)
         MediaPermissionHandler.ask_permission_to_access_audio_files(
             callback=callback)
+
+    def has_notification_access(self):
+        """Whether Android will show this app's notifications right now."""
+        try:
+            return bool(has_notification_permission())
+        except Exception as error:
+            logger.warning("notification permission check failed: %s", error)
+            return True
+
+    def request_notification_access(self, callback=None):
+        """Ask for ``POST_NOTIFICATIONS`` (Android 13+; settings below that)."""
+        try:
+            ask_notification_permission(callback=callback)
+        except Exception as error:
+            logger.warning("notification permission request failed: %s", error)

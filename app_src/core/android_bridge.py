@@ -68,8 +68,7 @@ def get_media_metadata_retriever():
         _retriever_loaded = True
         if autoclass is not None:
             try:
-                _retriever_class = autoclass(
-                    "android.media.MediaMetadataRetriever")
+                _retriever_class = autoclass("android.media.MediaMetadataRetriever")
             except Exception as error:  # pragma: no cover - Android only
                 logger.warning("no MediaMetadataRetriever: %s", error)
                 _retriever_class = None

@@ -1,0 +1,306 @@
+#:import dp kivy.metrics.dp
+#:import THEME ui.theme
+
+#:set BG THEME.UPDATE_BG
+#:set ACCENT THEME.UPDATE_ACCENT
+#:set TEXT THEME.UPDATE_TEXT
+#:set MUTED THEME.UPDATE_MUTED
+#:set LINE THEME.UPDATE_LINE
+#:set CARD THEME.UPDATE_CARD_BG
+#:set ROW THEME.UPDATE_ROW_BG
+#:set DANGER THEME.UPDATE_DANGER
+#:set OK THEME.UPDATE_OK
+#:set HIGHLIGHT THEME.UPDATE_HIGHLIGHT
+#:set BUTTON_TEXT THEME.UPDATE_BUTTON_TEXT
+#:set ACCENT_DIM THEME.UPDATE_ACCENT_DIM
+#:set BUTTON_TEXT_DIM THEME.UPDATE_BUTTON_TEXT_DIM
+
+<Txt@Label>:
+    color: TEXT
+    font_size: '14sp'
+    halign: 'left'
+    valign: 'middle'
+    text_size: self.width, None
+    size_hint_y: None
+    height: self.texture_size[1]
+
+<UpdateCard>:
+    canvas.before:
+        Color:
+            rgba: self.bg
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [self.radius]
+
+<UpdatePill>:
+    canvas.before:
+        Color:
+            rgba: self.bg if not self.outline else (0, 0, 0, 0)
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [self.radius]
+        Color:
+            rgba: LINE if self.outline else (0, 0, 0, 0)
+        Line:
+            rounded_rectangle: (self.x, self.y, self.width, self.height, self.radius)
+            width: dp(1)
+
+<UpdateAvatar>:
+    size_hint: None, None
+    size: dp(26), dp(26)
+    canvas:
+        Color:
+            rgba: self.tint
+        Ellipse:
+            pos: self.pos
+            size: self.size
+        Color:
+            rgba: BG
+        Line:
+            circle: (self.center_x, self.center_y, self.width / 2)
+            width: dp(1.2)
+    Label:
+        text: root.letter
+        font_size: '11sp'
+        color: TEXT
+        center: root.center
+
+<UpdateChip>:
+    size_hint: None, None
+    size: self.texture_size[0] + dp(30), dp(34)
+    color: BUTTON_TEXT
+    font_size: '12sp'
+    bold: True
+    halign: 'center'
+    valign: 'middle'
+    canvas.before:
+        Color:
+            rgba: self.bg
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [self.radius]
+
+<UpdateContent>:
+    orientation: 'vertical'
+    padding: dp(19) + root.inset_left, dp(8) + root.inset_top, dp(19) + root.inset_right, dp(10) + root.inset_bottom
+    spacing: dp(12)
+    canvas.before:
+        Color:
+            rgba: BG
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    # ---- App bar ----
+    BoxLayout:
+        size_hint_y: None
+        height: dp(48)
+        spacing: dp(14)
+        UpdateIconButton:
+            kind: 'back'
+            size_hint: None, None
+            size: dp(24), dp(48)
+            on_release: root.dispatch('on_back')
+        Label:
+            text: 'New version'
+            bold: True
+            font_size: '22sp'
+            color: TEXT
+            halign: 'left'
+            valign: 'middle'
+            text_size: self.size
+
+    # ---- Version ----
+    BoxLayout:
+        size_hint_y: None
+        height: dp(46)
+        Label:
+            text: root.version
+            bold: True
+            font_size: '34sp'
+            color: TEXT
+            size_hint_x: None
+            width: self.texture_size[0]
+            valign: 'middle'
+        Txt:
+            text: '  \u00b7  Released ' + root.released
+            color: MUTED
+            pos_hint: {"center_y": .4}
+
+    # ---- Update card ----
+    UpdateCard:
+        orientation: 'vertical'
+        size_hint_y: None
+        height: self.minimum_height
+        padding: dp(15)
+        spacing: dp(6)
+        Txt:
+            text: root.size_text + '  \u00b7  ' + '{:,}'.format(root.downloads) + ' downloads'
+            color: ACCENT
+        Txt:
+            text: root.status_text
+            color: DANGER if root.state == 'failed' else (MUTED if root.state != 'ready' else OK)
+        Widget:
+            size_hint_y: None
+            height: dp(4) if root.state == 'downloading' else 0
+            opacity: 1 if root.state == 'downloading' else 0
+            canvas:
+                Color:
+                    rgba: LINE
+                RoundedRectangle:
+                    pos: self.pos
+                    size: self.size
+                    radius: [dp(2)]
+                Color:
+                    rgba: ACCENT
+                RoundedRectangle:
+                    pos: self.pos
+                    size: self.width * root.shown / 100.0, self.height
+                    radius: [dp(2)]
+        Widget:
+            size_hint_y: None
+            height: dp(2)
+        BoxLayout:
+            size_hint_y: None
+            height: dp(40)
+            spacing: dp(10)
+            UpdatePill:
+                text: root.primary_text
+                font_size: '14sp'
+                color: BUTTON_TEXT_DIM if root.state in ('downloading', 'installing') else BUTTON_TEXT
+                disabled: root.state in ('downloading', 'installing')
+                disabled_color: BUTTON_TEXT_DIM
+                bg: ACCENT_DIM if root.state in ('downloading', 'installing') else ACCENT
+                on_release: root.primary_pressed()
+            UpdatePill:
+                text: 'Cancel' if root.state == 'downloading' else 'Later'
+                font_size: '14sp'
+                color: TEXT
+                outline: 1
+                size_hint_x: None
+                width: dp(96)
+                on_release: root.secondary_pressed()
+        Label:
+            text: 'Last updated  ' + root.last_updated + '  \u00b7  ' + root.installed
+            font_size: '12sp'
+            color: MUTED
+            halign: 'right'
+            valign: 'middle'
+            text_size: self.size
+            size_hint_y: None
+            height: dp(24)
+
+    # ---- Highlights ----
+    Txt:
+        text: 'Highlights on What\u2019s New'
+        bold: True
+        font_size: '16sp'
+    ScrollView:
+        do_scroll_x: False
+        bar_width: 0
+        BoxLayout:
+            id: highlights
+            orientation: 'vertical'
+            size_hint_y: None
+            height: self.minimum_height
+            spacing: dp(6)
+
+    # ---- Divider ----
+    Widget:
+        size_hint_y: None
+        height: dp(1)
+        canvas:
+            Color:
+                rgba: LINE
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+    # ---- GitHub row ----
+    UpdateClickableCard:
+        size_hint_y: None
+        height: dp(70)
+        padding: dp(15), dp(8)
+        spacing: dp(14)
+        bg: ROW
+        on_release: root.dispatch('on_open_release')
+        UpdateIcon:
+            kind: 'github'
+            size_hint: None, None
+            size: dp(28), dp(54)
+        BoxLayout:
+            orientation: 'vertical'
+            spacing: dp(2)
+            Label:
+                text: 'Learn more'
+                font_size: '15sp'
+                color: ACCENT
+                halign: 'left'
+                valign: 'bottom'
+                text_size: self.size
+            Label:
+                text: root.repo + '  \u00b7  ' + root.version
+                font_size: '12sp'
+                color: MUTED
+                halign: 'left'
+                valign: 'middle'
+                text_size: self.size
+            Label:
+                text: 'For more detailed information on release'
+                font_size: '10sp'
+                color: MUTED
+                halign: 'left'
+                valign: 'top'
+                text_size: self.size
+        UpdateIcon:
+            kind: 'external'
+            size_hint: None, None
+            size: dp(18), dp(54)
+
+    # ---- Contributors + APK type ----
+    BoxLayout:
+        size_hint_y: None
+        height: dp(44)
+        padding: dp(4), 0
+        spacing: dp(12)
+        RelativeLayout:
+            id: avatars
+            size_hint_x: None
+            width: dp(26)
+        BoxLayout:
+            orientation: 'vertical'
+            Label:
+                text: root.contributors_count_text
+                font_size: '14sp'
+                color: TEXT
+                halign: 'left'
+                valign: 'bottom'
+                text_size: self.size
+            Label:
+                text: root.contributors_text
+                font_size: '12sp'
+                color: MUTED
+                halign: 'left'
+                valign: 'top'
+                text_size: self.size
+        BoxLayout:
+            orientation: 'vertical'
+            size_hint_x: None
+            width: dp(110)
+            Label:
+                text: root.apk_type
+                font_size: '14sp'
+                color: TEXT
+                halign: 'right'
+                valign: 'bottom'
+                text_size: self.size
+            Label:
+                text: 'APK for your device'
+                font_size: '12sp'
+                color: MUTED
+                halign: 'right'
+                valign: 'top'
+                text_size: self.size
