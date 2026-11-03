@@ -96,23 +96,28 @@ class MeloApp(App):
         attach_insets(self.root_ui)
 
         # Avoiding black after splash screen so waiting a bit before scan.
-        Clock.schedule_once(self.weird_clock_issue,1)
+        Clock.schedule_once(self.on_startup_clock_scheduler,1)
         return self.root_ui
 
-    def weird_clock_issue(self, dt):
-        # Clock fired immediately reaching schedule line, so scheduling again here after that.
+    def on_startup_clock_scheduler(self, dt):
+        # Weird Clock fired immediately reaching schedule line, so scheduling again here after that.
         self._consume_launch_update_intent()
         Clock.schedule_once(self._start, 0.7)
         Clock.schedule_once(self._check_updates_later, 3)
 
     @mainthread
     def _start(self, _dt):
-        logger.info("starting: request permissions")
+        logger.info("starting: permission requests")
+        self._setup_update_check_and_bind_notification_listener()
 
         def __ask_for_audio_permission_and_scan(*args):
+            if not self.permissions_repository.has_audio_access():
+                self.library_view_model.set_status("Requesting audio access...")
             self.permissions_repository.request_audio_access(callback=lambda *_: self.library_view_model.scan())
-        self.permissions_repository.request_notification_access(callback=__ask_for_audio_permission_and_scan)
-        self._setup_update_check_and_bind_notification_listener()
+        
+        if not self.permissions_repository.has_notification_access():
+            self.library_view_model.set_status("Requesting Notification Access...")
+            self.permissions_repository.request_notification_access(callback=__ask_for_audio_permission_and_scan)
 
     def _setup_update_check_and_bind_notification_listener(self):
         """Schedule the Java background check and listen for its tap."""
