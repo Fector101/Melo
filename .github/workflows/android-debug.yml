@@ -2,9 +2,9 @@ name: Debug APK
 
 # Manual debug builds for putting a branch on a phone.
 #
-# The `abi` input builds one APK per ABI ("all"), a single multi-ABI APK
-# ("universal", the same shape the release workflow publishes as
-# melo-v<version>-universal.apk), or just one architecture.
+# The `abi` input builds "all" (the three shapes the release workflow
+# publishes: one APK per ABI plus the multi-ABI melo-v<version>-universal.apk),
+# the multi-ABI APK alone ("universal"), or just one architecture.
 #
 # Unlike the release workflow this needs no keystore secrets: buildozer signs a
 # debug APK with the runner's own debug key. Set a DEBUG_KEYSTORE_BASE64 secret
@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
     inputs:
       abi:
-        description: ABI to build
+        description: APKs to build (all = both ABIs + universal)
         type: choice
         options:
           - all
@@ -49,14 +49,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # "all" builds both ABIs as separate, smaller APKs, one per job.
+        # "all" builds the same three shapes the release workflow publishes:
+        # both ABIs as separate, smaller APKs plus the multi-ABI universal APK.
         # "universal" builds one multi-ABI APK from the base [app] profile,
-        # mirroring the universal asset the release workflow publishes.
+        # mirroring the universal asset the release workflow publishes. Its
+        # file name is "*-arm64-v8a_armeabi-v7a-debug.apk", not
+        # "*-universal-debug.apk" (the "Locate the APK" step accounts for it).
         # `inputs.abi` is empty when the workflow is dispatched without the
         # input filled in, and an empty arch silently makes
         # `buildozer --profile ""` build *all* archs into one APK whose name
         # then matches no "*-<arch>-debug.apk" pattern. Default to "all".
-        arch: ${{ fromJSON((inputs.abi || 'all') == 'all' && '["arm64-v8a","armeabi-v7a"]' || format('["{0}"]', inputs.abi)) }}
+        arch: ${{ fromJSON((inputs.abi || 'all') == 'all' && '["arm64-v8a","armeabi-v7a","universal"]' || format('["{0}"]', inputs.abi)) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -200,6 +203,7 @@ jobs:
       - name: Verify the APK
         env:
           APK: ${{ steps.apk.outputs.apk }}
+          ARCH: ${{ matrix.arch }}
         run: |
           set -euo pipefail
           test -n "${APK}"
@@ -207,6 +211,14 @@ jobs:
           "${BUILD_TOOLS}/apksigner" verify --print-certs "${APK}"
           "${BUILD_TOOLS}/aapt" dump badging "${APK}" \
             | grep -E '^(package|application-label|native-code|sdkVersion|targetSdkVersion):' || true
+          # Same guard as the release workflow: the universal APK must really
+          # carry both ABIs, otherwise "all" would hand out a duplicate.
+          if [ "${ARCH}" = "universal" ]; then
+            for abi in arm64-v8a armeabi-v7a; do
+              unzip -l "${APK}" | grep -q "lib/${abi}/" \
+                || { echo "::error::${APK} has no lib/${abi}/"; exit 1; }
+            done
+          fi
 
       - name: Collect artifacts
         id: package
