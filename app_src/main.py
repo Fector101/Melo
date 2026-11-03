@@ -118,7 +118,8 @@ class MeloApp(App):
         if not self.permissions_repository.has_notification_access():
             self.library_view_model.set_status("Requesting Notification Access...")
             self.permissions_repository.request_notification_access(callback=__ask_for_audio_permission_and_scan)
-
+        else:
+            __ask_for_audio_permission_and_scan()
     def _setup_update_check_and_bind_notification_listener(self):
         """Schedule the Java background check and listen for its tap."""
         if platform != "android":
