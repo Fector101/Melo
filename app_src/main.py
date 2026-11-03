@@ -51,9 +51,7 @@ class MeloApp(App):
     """The application; it only wires the layers together."""
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # The update check is deliberately late: startup and the first scan
-        # must not wait on the network. The updater modules are imported only
-        # after this check has found a newer release.
+        # All Classes and logical setup to avoid doing unnecessary work, to make sure there's no blank black screen after splash screen
         self.root_ui = None
         self.player_view_model = None
         self.library_view_model = None
@@ -103,30 +101,28 @@ class MeloApp(App):
 
     def weird_clock_issue(self, dt):
         # Clock fired immediately reaching schedule line, so scheduling again here after that.
+        self._consume_launch_update_intent()
         Clock.schedule_once(self._start, 0.7)
         Clock.schedule_once(self._check_updates_later, 3)
 
     @mainthread
     def _start(self, _dt):
         logger.info("starting: request permissions")
-        self.permissions_repository.request_notification_access(callback=self.__ask_for_audio_permission_and_scan)
-        self._start_update_notifications()
 
+        def __ask_for_audio_permission_and_scan(*args):
+            self.permissions_repository.request_audio_access(callback=lambda *_: self.library_view_model.scan())
+        self.permissions_repository.request_notification_access(callback=__ask_for_audio_permission_and_scan)
+        self._setup_update_check_and_bind_notification_listener()
 
-    def __ask_for_audio_permission_and_scan(self,*args):
-        self.permissions_repository.request_audio_access(callback=lambda *_: self.library_view_model.scan())
-
-    def _start_update_notifications(self):
+    def _setup_update_check_and_bind_notification_listener(self):
         """Schedule the Java background check and listen for its tap."""
         if platform != "android":
             return
         schedule_background_check()
         bind_update_intents(self._on_update_intent)
         # A tap that launched a cold start is read once the UI exists.
-        Clock.schedule_once(self._consume_launch_update_intent, 1.5)
 
-
-    def _consume_launch_update_intent(self, _dt):
+    def _consume_launch_update_intent(self):
         payload = read_update_intent()
         if payload:
             self._on_update_intent(payload)
