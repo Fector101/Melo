@@ -45,9 +45,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch:
-          - arm64-v8a
-          - armeabi-v7a
+        include:
+          # One ABI per release asset: the updater picks by file name, and
+          # only falls back to the universal build when no ABI matches.
+          - arch: arm64-v8a
+            profile: arm64-v8a
+          - arch: armeabi-v7a
+            profile: armeabi-v7a
+          # The base [app] profile builds both archs into one APK. It is the
+          # download for people who just want "the app"; arm devices still get
+          # their own smaller asset from the updater.
+          - arch: universal
+            profile: ""
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -101,9 +110,18 @@ jobs:
         run: yes | ~/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager --licenses
 
       - name: Build the release APK
+        env:
+          PROFILE: ${{ matrix.profile }}
         run: |
+          set -euo pipefail
           source venv/bin/activate
-          buildozer --profile "${{ matrix.arch }}" android release
+          if [ -n "${PROFILE}" ]; then
+            buildozer --profile "${PROFILE}" android release
+          else
+            # No profile: the base [app] archs (arm64-v8a, armeabi-v7a) go
+            # into a single multi-ABI APK.
+            buildozer android release
+          fi
 
       - name: Sign and verify the APK
         env:
@@ -135,6 +153,19 @@ jobs:
 
           "${BUILD_TOOLS}/apksigner" verify --verbose "${FINAL}"
           "${BUILD_TOOLS}/zipalign" -c -p 4 "${FINAL}"
+
+          # The updater trusts the file name, so prove the APK carries the
+          # architecture its name claims - especially "universal".
+          if [ "${ARCH}" = "universal" ]; then
+            for abi in arm64-v8a armeabi-v7a; do
+              unzip -l "${FINAL}" | grep -q "lib/${abi}/" \
+                || { echo "::error::${FINAL} has no lib/${abi}/"; exit 1; }
+            done
+          else
+            unzip -l "${FINAL}" | grep -q "lib/${ARCH}/" \
+              || { echo "::error::${FINAL} has no lib/${ARCH}/"; exit 1; }
+          fi
+
           rm -f "${KEYSTORE}"
 
       - name: Upload the APK artifact
@@ -154,7 +185,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download both APKs
+      - name: Download the APK artifacts
         uses: actions/download-artifact@v4
         with:
           path: dist
