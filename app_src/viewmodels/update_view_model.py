@@ -84,6 +84,7 @@ class UpdateViewModel(EventDispatcher):
 
         installed_version = self.repository.get_installed_version()
         release = self.release = self.repository.check_for_update()
+        self.has_new_version = release is not None
         if release is None:
             release = Release(
                 version=installed_version,
@@ -94,7 +95,6 @@ class UpdateViewModel(EventDispatcher):
                 published_at="",
                 asset=ReleaseAsset(name="", size=0, download_url="", abi="", downloads=0, updated_at=""),
             )
-        self.has_new_version = installed_version != release.version
         self.version = _with_v(release.version)
         self.installed = _with_v(installed_version)
         self.released = _format_date(release.published_at) or "Unknown"

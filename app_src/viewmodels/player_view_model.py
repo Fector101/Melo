@@ -312,9 +312,10 @@ class PlayerViewModel(EventDispatcher):
         self._playback_repository.sync_notification()
 
     def end_operations(self):
-        """End player operations"""
+        """Stop the ticker and release the audio engine."""
         self.stop_ticking()
         self._playback_repository.release()
+
 
 def _should_prev_button_only_restart_playing_song(_playback_repository):
     """Helper to check if when previous btn is clicked, should player go to previous song or restart current song"""

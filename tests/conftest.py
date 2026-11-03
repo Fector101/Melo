@@ -15,6 +15,10 @@ APP_SRC = Path(__file__).resolve().parent.parent / "app_src"
 if str(APP_SRC) not in sys.path:
     sys.path.insert(0, str(APP_SRC))
 
+# The device scripts end in ``_test.py``, so pytest would import them as test
+# modules. They drive a real phone over adb and are run by hand instead.
+collect_ignore_glob = ["device_*.py"]
+
 from kivy.clock import Clock  # noqa: E402
 
 

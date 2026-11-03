@@ -11,8 +11,6 @@ name: Debug APK
 # Nothing here publishes: no tag, no release, just artifacts that expire.
 
 on:
-  push:
-    branches: [feat/updater]
   workflow_dispatch:
     inputs:
       abi:
@@ -24,7 +22,7 @@ on:
           - armeabi-v7a
         default: all
       cleartext:
-        description: Allow plain HTTP (needed by scripts/device_self_update_test.py)
+        description: Allow plain HTTP (needed by tests/device_self_update_test.py)
         type: boolean
         default: false
 
@@ -32,7 +30,7 @@ permissions:
   contents: read
 
 concurrency:
-  # `inputs.abi` is empty on push, so fall back to "all" there too.
+  # `inputs.abi` is empty for a plain workflow_dispatch run without inputs.
   group: debug-${{ github.ref }}-${{ inputs.abi || 'all' }}
   cancel-in-progress: true
 
@@ -45,8 +43,8 @@ jobs:
       fail-fast: false
       matrix:
         # "all" builds both ABIs as separate, smaller APKs, one per job.
-        # `inputs.abi` is empty on a push event (the inputs only exist for
-        # workflow_dispatch), and an empty arch silently makes
+        # `inputs.abi` is empty when the workflow is dispatched without the
+        # input filled in, and an empty arch silently makes
         # `buildozer --profile ""` build *all* archs into one APK whose name
         # then matches no "*-<arch>-debug.apk" pattern. Default to "all".
         arch: ${{ fromJSON((inputs.abi || 'all') == 'all' && '["arm64-v8a","armeabi-v7a"]' || format('["{0}"]', inputs.abi)) }}
