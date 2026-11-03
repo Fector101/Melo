@@ -6,5 +6,3 @@ Music player for android
 
 ![UI Sample](https://raw.githubusercontent.com/Fector101/Melo/main/ui.png)
 
-## Documentation
-- [DEVELOPING.md](DEVELOPING.md) - how the code is put together, how to change it, and how to test it
