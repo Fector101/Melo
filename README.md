@@ -32,4 +32,4 @@ Requires only Audio and Notification to scan for music and display notification.
 
 | | |
 | --- | --- |
-| ![Update Sample](https://raw.githubusercontent.com/Fector101/Melo/performance/.github/update-ui.png) | ![UI Sample](https://raw.githubusercontent.com/Fector101/Melo/performance/.github/library-ui.png) |
+| ![Update Sample](https://raw.githubusercontent.com/Fector101/Melo/performance/.github/readme-imgs/update-ui.png) | ![UI Sample](https://raw.githubusercontent.com/Fector101/Melo/performance/.github/readme-imgs/library-ui.png) |
