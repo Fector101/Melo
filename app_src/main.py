@@ -17,7 +17,6 @@ import threading
 
 from kivy.app import App
 from kivy.clock import Clock, mainthread
-from kivy.core.window import Window
 from kivy.metrics import dp
 from kivy.utils import platform
 
@@ -44,6 +43,8 @@ if not logging.getLogger().handlers:
     logging.basicConfig(level=logging.WARNING, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
 if platform not in ("android", "ios"):
+    from kivy.core.window import Window # importing window takes time on Older Android
+    # Window.clearcolor = BG # if startup takes time, it still displays black so setting clearcolor make no difference
     Window.size = (390, 740)
 
 
@@ -67,12 +68,11 @@ class MeloApp(App):
         self._update_check_in_flight = False
 
     def build(self):
-        Window.clearcolor = BG
         load_kv_files()
 
         # --- the repositories: the only ones that talk to the device ------
         self.library_repository = LibraryRepository()
-        self.artwork_repository = ArtworkRepository(self.user_data_dir)
+        self.artwork_repository = ArtworkRepository()
         self.permissions_repository = PermissionsRepository()
         self.playback_repository = PlaybackRepository()
 
