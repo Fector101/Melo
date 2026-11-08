@@ -69,9 +69,6 @@ class ArtworkRepository:
 
     def __init__(self):
         self._cache_dir = None # /data/user/0/io.github.fector101.melo/files
-        # cache_root: a writable directory the art is cached in. When it
-        # is empty the ``ANDROID_PRIVATE`` environment variable is used
-        # instead (and, without that, no art is extracted at all).
         self._directory_ready = False
         self._paths = {}  # track path -> cached art file ("" when there is none)
         self._failed_extensions = set()  # logged once per file type
