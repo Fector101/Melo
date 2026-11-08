@@ -44,8 +44,6 @@ if not logging.getLogger().handlers:
     logging.basicConfig(level=logging.WARNING, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
 if platform not in ("android", "ios"):
-    from kivy.core.window import Window # importing window takes time on Older Android
-    # Window.clearcolor = BG # if startup takes time, it still displays black so setting clearcolor make no difference
     Window.size = (390, 740)
 
 
