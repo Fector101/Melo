@@ -17,6 +17,7 @@ import threading
 
 from kivy.app import App
 from kivy.clock import Clock, mainthread
+from kivy.core.window import Window
 from kivy.metrics import dp
 from kivy.utils import platform
 
