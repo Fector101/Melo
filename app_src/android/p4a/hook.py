@@ -21,6 +21,51 @@ FILE_PROVIDER = f"""
 NETWORK_SECURITY_CONFIG = Path(__file__).resolve().parent.parent / "res" / "xml" / "network_security_config.xml"
 NETWORK_SECURITY_ATTRIBUTE = 'android:networkSecurityConfig="@xml/network_security_config"'
 
+LOADING_SCREEN_TIMER = "loadingScreenRemovalTimer.schedule(removalTask, 5000);"
+LOADING_SCREEN_TIMER_DISABLED = (
+    "// loadingScreenRemovalTimer.schedule(removalTask, 5000); "
+    "// p4a hook: main.py releases the splash on Window.on_flip"
+)
+
+
+def patch_loading_screen_fallback(java_file):
+    """Disable p4a's 5 s loading-screen fallback.
+
+    PythonActivity.appConfirmedActive() is called from SDLActivity.runMain()
+    before nativeRunMain(), so this timer starts before main.py. On a cold start
+    whose SDL3/GL init takes longer than 5 s it removes the splash before Kivy
+    has drawn a frame, leaving the never-swapped SDL surface black. main.py
+    holds the splash until Window.on_flip, so this fallback must not win.
+    """
+    java_file = Path(java_file)
+    source = java_file.read_text(encoding="utf-8")
+
+    if LOADING_SCREEN_TIMER_DISABLED in source:
+        print(f"Loading-screen fallback already disabled in {java_file}")
+        return
+
+    if source.count(LOADING_SCREEN_TIMER) != 1:
+        raise RuntimeError(
+            "Expected exactly one %r in %s. Update patch_loading_screen_fallback "
+            "to match the new PythonActivity.java."
+            % (LOADING_SCREEN_TIMER, java_file)
+        )
+
+    java_file.write_text(
+        source.replace(LOADING_SCREEN_TIMER, LOADING_SCREEN_TIMER_DISABLED),
+        encoding="utf-8",
+    )
+    print(f"Disabled p4a's 5 s loading-screen fallback in {java_file}")
+
+
+def before_apk_build(toolchain):
+    """p4a calls this in the dist directory, immediately before Gradle."""
+    python_activity = (
+        Path(toolchain._dist.dist_dir)
+        / "src" / "main" / "java" / "org" / "kivy" / "android"
+        / "PythonActivity.java"
+    )
+    # patch_loading_screen_fallback(python_activity)
 
 
 def _inject_file_provider(manifest_path):
