@@ -28,5 +28,8 @@ Requires only Audio and Notification to scan for music and display notification.
 > Melo is still in it's early stages and may have bugs.  
 > If you find any, please report them in the [issues](https://github.com/Fector101/Melo/issues) section or create a [pull request](https://github.com/Fector101/Melo/pulls), to help improve the app.
 
-## UI Sample:
-![UI Sample](https://raw.githubusercontent.com/Fector101/Melo/main/ui.png)
+## Screenshots:
+### Media Notification Image
+![UI Sample](https://raw.githubusercontent.com/Fector101/Melo/main/.github/media-notification.jpg)
+### Library Screen
+![UI Sample](https://raw.githubusercontent.com/Fector101/Melo/main/.github/library-ui.jpg)
