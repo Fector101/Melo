@@ -33,7 +33,6 @@ from repositories.update_notification_repository import (bind_update_intents,
                                                          schedule_background_check)
 from ui import load_kv_files
 from ui.screens.library_screen import LibraryScreen
-from ui.theme import BG
 from viewmodels.library_view_model import LibraryViewModel
 from viewmodels.player_view_model import PlayerViewModel
 
