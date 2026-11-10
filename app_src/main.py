@@ -99,7 +99,8 @@ class MeloApp(App):
         return self.root_ui
 
     def on_startup_clock_scheduler(self, dt):
-        # Weird Clock fired immediately reaching schedule line, so scheduling again here after that.
+        # Bouncing the Clock so it doesn't interfere with UI generation,
+        # I've tested this pattern on different Android versions and it works properly.
         self._consume_launch_update_intent()
         Clock.schedule_once(self._start, 0.7)
         Clock.schedule_once(self._check_updates_later, 3)
