@@ -117,3 +117,10 @@ newer than the installed `versionName` for the notification scenarios.
 ```python
 traceback.print_stack()
 ```
+
+## How i tagged V0.0.1
+```
+git tag v0.0.1
+git push origin v0.0.1
+```
+then workflow script handled the rest using `.github/version-notes/release-note-v0.0.1.txt` as the release body.
