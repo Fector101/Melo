@@ -33,7 +33,6 @@ from repositories.update_notification_repository import (bind_update_intents,
                                                          schedule_background_check)
 from ui import load_kv_files
 from ui.screens.library_screen import LibraryScreen
-from ui.theme import BG
 from viewmodels.library_view_model import LibraryViewModel
 from viewmodels.player_view_model import PlayerViewModel
 
@@ -67,12 +66,11 @@ class MeloApp(App):
         self._update_check_in_flight = False
 
     def build(self):
-        Window.clearcolor = BG
         load_kv_files()
 
         # --- the repositories: the only ones that talk to the device ------
         self.library_repository = LibraryRepository()
-        self.artwork_repository = ArtworkRepository(self.user_data_dir)
+        self.artwork_repository = ArtworkRepository()
         self.permissions_repository = PermissionsRepository()
         self.playback_repository = PlaybackRepository()
 
@@ -100,7 +98,8 @@ class MeloApp(App):
         return self.root_ui
 
     def on_startup_clock_scheduler(self, dt):
-        # Weird Clock fired immediately reaching schedule line, so scheduling again here after that.
+        # Bouncing the Clock so it doesn't interfere with UI generation,
+        # I've tested this pattern on different Android versions and it works properly.
         self._consume_launch_update_intent()
         Clock.schedule_once(self._start, 0.7)
         Clock.schedule_once(self._check_updates_later, 3)

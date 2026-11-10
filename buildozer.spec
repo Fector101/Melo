@@ -11,7 +11,7 @@ source.dir = app_src
 source.include_exts = py,png,jpg,jpeg,kv,atlas,ttf,json,xml,wav
 source.exclude_dirs = bin, venv, .buildozer, __pycache__, .idea, .pytest_cache, tests, .facts, .github, dist, build
 p4a.bootstrap = sdl3
-requirements = python3, kivy==master, requests, https://github.com/Fector101/android_notify/archive/main.zip
+requirements = python3, kivy==master, requests, android-notify
 
 
 osx.python_version = 3

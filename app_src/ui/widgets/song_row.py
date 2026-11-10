@@ -40,7 +40,7 @@ class SongRow(RecycleDataViewBehavior, ButtonBehavior, BoxLayout):
         # base class copies every key of `data` onto the matching property
         return super().refresh_view_attrs(rv, index, data)
 
-    def on_release(self, touch):
+    def on_release(self, touch = None):
         callback = self.on_select
         if callback is not None:
             callback(self.path)
