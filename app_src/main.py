@@ -46,13 +46,6 @@ if not logging.getLogger().handlers:
 if platform not in ("android", "ios"):
     Window.size = (390, 740)
 
-# Kivy schedules EventLoop.remove_android_splash with timeout 0 on the first
-# tick, which runs before the first buffer swap. Hold the loading screen
-# instead, and release it from Window.on_flip below.
-# from kivy.base import EventLoop
-# if platform == "android":
-#     EventLoop.remove_android_splash = lambda *args, **kwargs: None
-
 
 class MeloApp(App):
     """The application; it only wires the layers together."""
@@ -72,39 +65,6 @@ class MeloApp(App):
         self._update_chip = None
         self._update_chip_class = None
         self._update_check_in_flight = False
-
-    def on_start(self):
-        print("on start")
-    #     self._release_presplash_after_first_frame()
-
-    # def _release_presplash_after_first_frame(self):
-    #     """Hold p4a's loading screen until Kivy has drawn a real frame."""
-
-    #     if platform != "android":
-    #         return
-
-    #     print("ranning on android, scheduling presplash removal")
-    #     try:
-    #         from kivy.mobile._platform.android import remove_presplash
-    #     except ImportError:
-    #         return
-    #     from kivy.core.window import Window
-
-    #     released = []
-
-    #     def release(*_):
-    #         if released:
-    #             return
-    #         released.append(True)
-    #         Window.unbind(on_flip=release)
-    #         try:
-    #             remove_presplash()
-    #         except Exception:
-    #             logger.exception("Could not remove the presplash")
-
-    #     Window.bind(on_flip=release)
-    #     # Never hold the splash forever if no frame is ever swapped.
-    #     Clock.schedule_once(release, 3)
 
     def build(self):
         load_kv_files()
