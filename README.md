@@ -27,6 +27,9 @@ Requires only Audio and Notification to scan for music and display notification.
 > [!NOTE]
 > Melo is still in it's early stages and may have bugs.  
 > If you find any, please report them in the [issues](https://github.com/Fector101/Melo/issues) section or create a [pull request](https://github.com/Fector101/Melo/pulls), to help improve the app.
+### Package used for Music Notification
+
+[Android Notify](https://github.com/fector101/android_notify) simplified creating and controlling the notification **without** writing JAVA
 
 ## Screenshots:
 ### Media Notification Image
