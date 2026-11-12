@@ -19,6 +19,7 @@ from kivy.properties import (AliasProperty, ListProperty, NumericProperty,
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.modalview import ModalView
+from kivy.uix.screenmanager import Screen
 from kivy.utils import platform
 
 from ui import theme as THEME
@@ -208,7 +209,7 @@ class UpdateContent(BoxLayout):
         _open_external(self.release_url)
 
 
-class UpdateScreen(ModalView):
+class UpdateScreen(Screen):
     """A full-window update screen driven by an :class:`UpdateViewModel`."""
 
     inset_top = NumericProperty(0)
@@ -271,35 +272,17 @@ class UpdateScreen(ModalView):
             self.bind(**{name: content.setter(name)})
 
     # ------------------------------------------------------------------ #
-    # Modal lifecycle                                                     #
-    # ------------------------------------------------------------------ #
-    def open(self, *args, **kwargs):
-        super().open(*args, **kwargs)
-        if not self._keyboard_bound:
-            Window.bind(on_keyboard=self._on_window_key)
-            self._keyboard_bound = True
-
-    def _on_dismissed(self, *_):
-        if self._keyboard_bound:
-            Window.unbind(on_keyboard=self._on_window_key)
-            self._keyboard_bound = False
-
-    def _on_window_key(self, _window, key, *_):
-        if key == 27:  # Android back / desktop Escape
-            self._on_back()
-            return True
-        return False
-
-    # ------------------------------------------------------------------ #
     # Commands from the content                                           #
     # ------------------------------------------------------------------ #
     def _on_back(self, *_):
         if self.view_model.state == "downloading":
             self.view_model.cancel()
-        self.dismiss()
+        self.manager.in_library_screen_show_update_chip()
+        self.manager.current = "library"
 
     def _on_later(self, *_):
-        self.dismiss()
+        self.manager.in_library_screen_show_update_chip()
+        self.manager.current = "library"
 
     def _on_download(self, *_):
         self.view_model.download()

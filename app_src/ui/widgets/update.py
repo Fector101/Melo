@@ -10,7 +10,7 @@ from math import atan2, cos, hypot, pi, sin, sqrt
 from kivy.graphics import Color, Line, Mesh
 from kivy.graphics.tesselator import TYPE_POLYGONS, WINDING_ODD, Tesselator
 from kivy.metrics import dp
-from kivy.properties import ListProperty, NumericProperty, StringProperty, ObjectProperty
+from kivy.properties import ListProperty, NumericProperty, StringProperty, ObjectProperty, BooleanProperty
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
@@ -57,6 +57,19 @@ class UpdateChip(ButtonBehavior, Label):
 
     bg = ListProperty(list(THEME.UPDATE_ACCENT))
     radius = NumericProperty(dp(17))
+    parent = ObjectProperty(None)
+    visible = BooleanProperty(False)
+
+    def show(self):
+        if not self.visible:
+            self.visible = True
+            self.y = self.parent.height - self.height - dp(12) - self.parent.inset_top
+            self.parent.add_widget(self)
+
+    def hide(self):
+        if self.visible:
+            self.visible = False
+            self.parent.remove_widget(self)
 
 
 # --------------------------------------------------------------------------- #

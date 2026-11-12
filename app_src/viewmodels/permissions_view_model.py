@@ -2,8 +2,6 @@
 
 import logging
 
-# from android_notify.config import on_android_platform
-
 logger = logging.getLogger("melo.permissions")
 
 from android_notify.internal.permissions import (ask_notification_permission,
@@ -12,7 +10,7 @@ from android_notify.internal.permissions import (ask_notification_permission,
 from android_notify.media.music.helper import MediaPermissionHandler
 
 
-class PermissionsRepository:
+class PermissionsViewModel:
     """Asks Android for the permission to read the audio library."""
 
     def is_declared_in_manifest(self):
