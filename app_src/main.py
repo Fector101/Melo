@@ -66,7 +66,16 @@ class MeloApp(App):
         self._update_check_in_flight = False
 
     def build(self):
+        create screen manager 
+        tell it to show the first screen library screen
+        it internally checks if the exists if not it creates it else it just opens it
+        it also creates it Viewmodels when going to that screen including the first screen for cleaness sack scoping it's creation 
+        the update badge comes from update screen and attaches to library screen
+        the app class and other screens only talks to the screen manager class and not the individual screen 
+        there should be no class on App class apart from build, start, pause, stop
+            
         load_kv_files()
+            
 
         # --- the repositories: the only ones that talk to the device ------
         self.library_repository = LibraryRepository()
@@ -91,11 +100,11 @@ class MeloApp(App):
         self.library_view_model.set_status("Starting...")
 
         # Pad the UI clear of the status bar / nav buttons Android 15+
-        attach_insets(self.root_ui)
+        attach_insets(self.scrren_manager)
 
         # Avoiding black after splash screen so waiting a bit before scan.
         Clock.schedule_once(self.on_startup_clock_scheduler,1)
-        return self.root_ui
+        return self.screen_manger
 
     def on_startup_clock_scheduler(self, dt):
         # Bouncing the Clock so it doesn't interfere with UI generation,
