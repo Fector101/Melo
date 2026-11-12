@@ -20,7 +20,7 @@ class LibraryRepository:
     def scan(self):
         """Every audio track of the device, sorted by title."""
         if not on_android_platform():
-            return self.desktop_scan()
+            return [] # self.desktop_scan()
 
         context = get_python_activity_context()
         if not context:

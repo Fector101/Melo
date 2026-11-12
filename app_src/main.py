@@ -11,8 +11,8 @@ in one of these layers:
     ui/            widgets, screens and KV rules
 """
 
-import logging
 import os
+import logging
 import threading
 
 from kivy.app import App
@@ -22,13 +22,11 @@ from kivy.utils import platform
 
 from android_notify import logger as android_notify_logger
 
-from core.insets import attach_insets
-
-from repositories.update_notification_repository import (bind_update_intents, cancel_notification, schedule_background_check)
 from repositories.intent_repository import IntentRepository
+from repositories.update_notification_repository import bind_update_intents, schedule_background_check
 
-from ui.screens.manager import MeloScreenManager
 from ui import load_kv_files # TODO REMOVE, it's used for loading simple widgets
+from ui.screens.manager import MeloScreenManager
 
 android_notify_logger.setLevel(logging.WARNING)
 logger = logging.getLogger("melo")
@@ -44,23 +42,17 @@ class MeloApp(App):
     """The application; it only wires the layers together."""
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # All Classes and logical setup to avoid doing unnecessary work, to make sure there's no blank black screen after splash screen
         self.screen_manager = None
 
         self._update_repository = None
         self._update_view_model = None
-        self._update_screen = None
-        self._update_chip = None
-        self._update_chip_class = None
         self._update_check_in_flight = False
 
     def build(self):
-        load_kv_files() # TODO REMOVE, it's used for loading simple widgets
+        load_kv_files()
         
         self.screen_manager = MeloScreenManager()
         self.screen_manager.current = "library"
-
-        attach_insets(self.screen_manager) # Pad the UI clear of the status bar / nav buttons Android 15+
 
         # Avoiding black after splash screen so waiting a bit before scan.
         Clock.schedule_once(self.on_startup_clock_scheduler,1)
@@ -76,7 +68,7 @@ class MeloApp(App):
     @mainthread
     def _start(self, _dt):
         logger.info("starting: permission requests")
-        self._setup_update_check_and_bind_update_notification_listener()
+        self._setup_update_check_scheduler_and_bind_update_notification_listener()
 
         permissions_view_model = self.screen_manager.permissions_view_model
         library_view_model = self.screen_manager.library_view_model
@@ -92,61 +84,46 @@ class MeloApp(App):
         else:
             __ask_for_audio_permission_and_scan()
 
-    def _setup_update_check_and_bind_update_notification_listener(self):
+    def _setup_update_check_scheduler_and_bind_update_notification_listener(self):
         """Schedule the Java background check and listen for its tap."""
-        if platform != "android":
-            return
         schedule_background_check()
-        bind_update_intents(self._on_update_intent)
-        # A tap that launched a cold start is read once the UI exists.
+        bind_update_intents(self.handle_update_intent)
 
     def on_intent(self):
         intent_repo = IntentRepository()
         payload = intent_repo.read_update_intent()
-        if payload:
-            self._on_update_intent(payload)
+        self.handle_update_intent(payload)
 
-    def _on_update_intent(self, payload):
+    def handle_update_intent(self, payload):
         """The user tapped the background update notification."""
         if not payload:
             return
         logger.info("Update notification tapped: %s", payload)
-        if self._update_view_model is not None and self._update_view_model.has_new_version:
-            Clock.schedule_once(lambda _dt: self._show_update_screen(), 0)
-            return
-        threading.Thread(target=self._check_updates, daemon=True).start()
+        self.screen_manager.current = "update"
 
-    def _check_updates_later(self, _dt):
+    def _check_updates_later(self, _dt=None):
         """Run the update check off the UI thread, after startup settles."""
-        if platform == "android" or os.environ.get("MELO_UPDATE_API_URL"):
-            threading.Thread(target=self._check_updates, daemon=True).start()
+        def _check_updates():
+            """Build and open the update screen if new version exists (only once, then reuse it)."""
 
-    def _check_updates(self):
-        """Build and open the update screen if new version exists (only once, then reuse it)."""
-        if self._update_check_in_flight:
-            return
-        self._update_check_in_flight = True
-        try:
             from viewmodels.update_view_model import UpdateViewModel
             from repositories.update_repository import UpdateRepository
 
-            self._update_repository = UpdateRepository()
-            self._update_view_model = UpdateViewModel(self._update_repository)
+            update_view_model = UpdateViewModel(UpdateRepository())
 
-            if self._update_view_model.has_new_version:
-                Clock.schedule_once(lambda _dt: self._show_update_screen(), 0)
-        finally:
-            self._update_check_in_flight = False
+            if update_view_model.has_new_version:
+                Clock.schedule_once(lambda _dt: setattr(self.screen_manager,"current","update"), 0)
 
-    def _show_update_screen(self):
-        cancel_notification()
-        self.screen_manager.current = "update"
-
+        if platform == "android" or os.environ.get("MELO_UPDATE_API_URL"):
+            threading.Thread(target=_check_updates, daemon=True).start()
 
     def on_stop(self):
-        if self._update_view_model is not None:
-            self._update_view_model.shutdown()
-        self.screen_manager.player_view_model.end_operations()
+        update_view_model = self.screen_manager.update_view_model
+        player_view_model = self.screen_manager.player_view_model
+
+        if update_view_model is not None:
+            update_view_model.shutdown()
+        player_view_model.end_operations()
 
 
 if __name__ == "__main__":

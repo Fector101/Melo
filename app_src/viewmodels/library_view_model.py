@@ -54,7 +54,7 @@ class LibraryViewModel(EventDispatcher):
         """
         if self._scan_in_progress:
             return
-        if 0:#not on_android_platform():# comment out to scan on desktop
+        if not on_android_platform():# comment out to scan on desktop
             self.status_text = "Scanning needs Android (device example)"
             return
         if on_android_platform() and not self._permissions.is_declared_in_manifest():

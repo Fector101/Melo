@@ -4,6 +4,8 @@
 from typing import Callable
 from kivy.uix.screenmanager import ScreenManager, Screen
 
+from core.insets import attach_insets
+
 
 # A screen name string and a function that takes no arguments and returns a Screen instance
 ScreenFactory = Callable[[], Screen]
@@ -17,6 +19,8 @@ class MeloScreenManager(ScreenManager):
             "library": self.__create_library_screen,
             "settings": self.__create_update_screen
         }
+        attach_insets(self) # Pad the UI clear of the status bar / nav buttons Android 15+
+
 
     def on_current(self, instance, value):
         self.__ensure_screen(value)
@@ -68,7 +72,9 @@ class MeloScreenManager(ScreenManager):
         from ui.screens.update_screen import UpdateScreen
         from viewmodels.update_view_model import UpdateViewModel
         from repositories.update_repository import UpdateRepository
+        from repositories.update_notification_repository import cancel_notification
 
+        cancel_notification()
         self.update_repository = UpdateRepository()
         self.update_view_model = UpdateViewModel(self._update_repository)
         self._update_screen = UpdateScreen(self.update_view_model)

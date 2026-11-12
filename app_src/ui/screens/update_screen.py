@@ -294,7 +294,7 @@ class UpdateScreen(Screen):
         self.view_model.install()
 
 
-_relative_to_module_folder=os.path.join("kv", "lazy", "update_screen.kv")
+_relative_to_module_folder=os.path.join("kv", "update_screen.kv")
 _file_dirname = os.path.dirname(os.path.abspath(__file__))
 _upper_location = os.path.dirname(_file_dirname)
 _KV_PATH = os.path.join(str(_upper_location),_relative_to_module_folder )
