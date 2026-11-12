@@ -1,8 +1,6 @@
 """The library screen: the list of tracks, the player and the scan button."""
-import sys
 
 from kivy.properties import NumericProperty, StringProperty
-from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.screenmanager import Screen
 
 from ui import widgets  # noqa: F401  (importing registers the widgets)
@@ -14,14 +12,12 @@ import os
 
 from kivy.lang import Builder
 
-#: The directory with the KV rules of this layer.
-# on pc : sys.path: ['app_src/main.py']
-entry_file_path = os.path.abspath(sys.argv[0])
-entry_file_dir = os.path.dirname(entry_file_path)
-kv_files_dir = os.path.join(entry_file_dir, "ui", "kv")
-library_screen_kv_path = os.path.join(kv_files_dir, "library_screen.kv")
-print(f"library_screen_kv_path: {library_screen_kv_path}")
-Builder.load_file(library_screen_kv_path)
+
+_relative_to_module_folder=os.path.join("kv", "library_screen.kv")
+_file_dirname = os.path.dirname(os.path.abspath(__file__))
+_upper_location = os.path.dirname(_file_dirname)
+_KV_PATH = os.path.join(str(_upper_location),_relative_to_module_folder )
+Builder.load_file(_KV_PATH)
 
 class LibraryScreen(Screen):
     """The root widget of the app.
