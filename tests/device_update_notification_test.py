@@ -97,6 +97,8 @@ SCHEDULED = "Background update check scheduled"
 FOREGROUND_SKIP = "App is in the foreground, skipping"
 SENT = "Notification sent for v"
 ALREADY_LATEST = "Already on latest version"
+FETCH_FAILED = "Failed to fetch latest version"
+CLEARTEXT_BLOCKED = "Cleartext HTTP traffic"
 COOLDOWN = "Cooldown active, skipping"
 TAPPED = "Update notification tapped"   # the payload follows; no colon asserted
 
@@ -122,10 +124,10 @@ def notification_needles(offered: str) -> tuple[str, ...]:
 # --------------------------------------------------------------------------- #
 # Reading the phone                                                           #
 # --------------------------------------------------------------------------- #
-def journal(adb: Adb, lines: int = 4000) -> str:
+def journal(adb: Adb) -> str:
     """Logcat for the Python app plus the Java update-check tags."""
     specs = [f"{tag}:V" for tag in LOG_TAGS]
-    return adb.run("logcat", "-d", "-t", str(lines), "-s", *specs, check=False)
+    return adb.run("logcat", "-d", "-s", *specs, check=False)
 
 
 def wait_for_text(adb: Adb, needle: str, timeout: float, what: str) -> str:
@@ -509,8 +511,29 @@ def check_not_newer(adb: Adb, server: FakeRelease, report: Report,
                   "the background check to be scheduled")
     report.check("Melo is in the background", background_app(adb),
                  f"top activity {adb.top_activity().split(' ')[0][:60] or 'none'}")
-    wait_for_text(adb, ALREADY_LATEST, 60 * scale,
-                  "the worker to compare versions")
+
+    def worker_result():
+        logs = journal(adb)
+        if ALREADY_LATEST in logs:
+            return ALREADY_LATEST
+        if CLEARTEXT_BLOCKED in logs:
+            return CLEARTEXT_BLOCKED
+        if FETCH_FAILED in logs:
+            return FETCH_FAILED
+        return None
+
+    result = wait_for(worker_result, 60 * scale,
+                      "the worker to compare versions")
+    if result == CLEARTEXT_BLOCKED:
+        raise Failure(
+            "the installed APK blocks the test's local HTTP endpoint. "
+            "Rebuild and reinstall a debug APK with "
+            "app_src/android/res/xml/network_security_config.xml allowing "
+            "cleartext traffic, then rerun this test.")
+    if result == FETCH_FAILED:
+        raise Failure(
+            "the worker ran but could not fetch the local release; see the "
+            "UpdateNotifier errors above for the cause.")
     report.check("the worker compared against the installed version", True,
                  f"latest={tag}, installed={installed}")
     report.check("nothing was posted", SENT not in journal(adb), "no new release")

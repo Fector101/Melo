@@ -1,4 +1,4 @@
-"""The update screen: the modal, its KV, and the startup boundary."""
+"""The update screen: its KV, navigation and the startup boundary."""
 
 import os
 import subprocess
@@ -6,7 +6,6 @@ import sys
 import time
 from pathlib import Path
 
-import pytest
 from kivy.clock import Clock
 
 from models.release import Release, ReleaseAsset
@@ -110,7 +109,6 @@ def test_the_screen_has_its_content():
     assert screen.children == [screen.content]
     # ``ids`` holds weak proxies, hence the ``==``.
     assert screen.ids["main_container"] == screen.content
-    assert screen.auto_dismiss is False
     assert wait_for_clock(
         lambda: view_model.contributors == [OWNER, "bob", "eli"])
 
@@ -191,15 +189,71 @@ def test_the_secondary_button_cancels_a_download():
     assert repository.cancelled is True
 
 
-def test_the_later_button_dismisses_the_modal():
+class FakeLibraryScreen:
+    """Records what the update screen asks the library screen to show."""
+
+    def __init__(self):
+        self.update_chips = []
+
+    def show_update_chip(self, version):
+        self.update_chips.append(version)
+
+
+class FakeManager:
+    """Just enough of a ``ScreenManager`` for the navigation tests."""
+
+    def __init__(self, screens):
+        self.screens_by_name = dict(screens)
+        self.current = None
+
+    def has_screen(self, name):
+        return name in self.screens_by_name
+
+    def get_screen(self, name):
+        return self.screens_by_name[name]
+
+
+def test_the_later_button_returns_to_the_library():
     screen, view_model, _ = make_screen()
-    dismissed = []
-    screen.bind(on_dismiss=lambda *_: dismissed.append(True))
-    screen.open(animation=False)
+    library = FakeLibraryScreen()
+    manager = FakeManager({"library": library, "update": screen})
+    screen.manager = manager
 
     screen.content.secondary_pressed()
 
-    assert dismissed == [True]
+    assert manager.current == "library"
+    assert library.update_chips == [view_model.version]
+
+
+def test_the_back_button_cancels_then_returns():
+    screen, view_model, repository = make_screen()
+    library = FakeLibraryScreen()
+    manager = FakeManager({"library": library, "update": screen})
+    screen.manager = manager
+    repository.wait_for_cancel = True
+
+    view_model.download()
+    assert wait_for_clock(lambda: repository.started)
+
+    screen.content.dispatch("on_back")
+
+    assert wait_for_clock(lambda: repository.cancelled)
+    assert manager.current == "library"
+    assert library.update_chips == [view_model.version]
+
+
+def test_escape_is_handled_while_the_screen_is_shown():
+    screen, _, _ = make_screen()
+    manager = FakeManager({"library": FakeLibraryScreen(), "update": screen})
+    screen.manager = manager
+
+    screen.on_enter()
+    try:
+        assert screen._on_window_key(None, 27, "escape", None) is True
+    finally:
+        screen.on_leave()
+
+    assert manager.current == "library"
 
 
 def test_the_chip_is_built_and_tappable():
@@ -210,7 +264,7 @@ def test_the_chip_is_built_and_tappable():
     Clock.tick()
 
     assert chip.width > 0
-    chip.dispatch("on_release", None)
+    chip.dispatch("on_release")
 
     assert tapped == [True]
 
@@ -250,9 +304,12 @@ def test_importing_the_app_does_not_import_the_update_ui():
         "False", "False", "False", "False"]
 
 
-def test_the_update_kv_is_not_in_the_startup_folder():
-    startup_folder = ROOT / "app_src" / "ui" / "kv"
-    lazy_folder = startup_folder / "lazy"
+def test_the_update_kv_is_loaded_lazily_by_the_screen():
+    kv_folder = ROOT / "app_src" / "ui" / "kv"
+    widgets_folder = kv_folder / "widgets"
 
-    assert (lazy_folder / "update_screen.kv").is_file()
-    assert not (startup_folder / "update_screen.kv").exists()
+    # The screen loads its own rule, so startup (which loads only the widget
+    # rules) never parses the update UI.
+    assert (kv_folder / "update_screen.kv").is_file()
+    assert not (widgets_folder / "update_screen.kv").exists()
+    assert not (widgets_folder / "library_screen.kv").exists()
