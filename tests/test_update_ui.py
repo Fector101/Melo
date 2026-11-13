@@ -106,10 +106,10 @@ def test_the_screen_has_its_content():
     screen, view_model, _ = make_screen()
 
     assert isinstance(screen.content, UpdateContent)
-    # ModalView is an AnchorLayout with no `content` property: the widget only
-    # renders when it is actually added to the modal.
     assert screen.content.parent is screen
     assert screen.children == [screen.content]
+    # ``ids`` holds weak proxies, hence the ``==``.
+    assert screen.ids["main_container"] == screen.content
     assert screen.auto_dismiss is False
     assert wait_for_clock(
         lambda: view_model.contributors == [OWNER, "bob", "eli"])

@@ -209,6 +209,8 @@ class UpdateContent(BoxLayout):
         _open_external(self.release_url)
 
 
+
+
 class UpdateScreen(Screen):
     """A full-window update screen driven by an :class:`UpdateViewModel`."""
 
@@ -219,28 +221,25 @@ class UpdateScreen(Screen):
 
     def __init__(self, view_model, **kwargs):
         super().__init__(**kwargs)
+
+        self.name = "update"
         self.view_model = view_model
         self.auto_dismiss = False
         self.background_color = list(THEME.UPDATE_BG)
         self.size_hint = (1, 1)
         self._keyboard_bound = False
 
-        content = UpdateContent()
+        content = self.ids.main_container
         self.content = content
-        # ModalView has no ``content`` property (it is an AnchorLayout), so the
-        # assignment above only keeps the attribute for callers. Without this
-        # add_widget the content never enters the scene graph and the opened
-        # modal is just its dark background.
-        self.add_widget(content)
         content.bind(on_back=self._on_back,
                      on_download=self._on_download,
                      on_cancel=self._on_cancel,
                      on_later=self._on_later,
                      on_install=self._on_install)
-        self.bind(on_dismiss=self._on_dismissed)
         self._bind_view_model()
-        self._bind_insets()
+        # self._bind_insets()
         self.view_model.load_details()
+
 
     def _bind_view_model(self):
         vm = self.view_model
@@ -265,11 +264,8 @@ class UpdateScreen(Screen):
                 contributors=content.setter("contributors"),
                 failure_text=content.setter("failure_text"))
 
-    def _bind_insets(self):
-        content = self.content
-        for name in ("inset_top", "inset_bottom", "inset_left", "inset_right"):
-            setattr(content, name, getattr(self, name))
-            self.bind(**{name: content.setter(name)})
+    def apply_padding(self, inset_top, inset_bottom):
+        self.ids.main_container.padding = [dp(19), inset_top + dp(8), dp(19), inset_bottom + dp(10)]
 
     # ------------------------------------------------------------------ #
     # Commands from the content                                           #

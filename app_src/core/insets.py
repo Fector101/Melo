@@ -109,15 +109,21 @@ def _fallback_insets():
             "bottom": _resource_inset_px("navigation_bar_height"),
             "left": 0, "right": 0}
 
-
 def _apply_insets(root, insets):
     """Push insets onto the Kivy root from whichever thread reported them."""
 
+    print(root)
     def _set(_dt):
         root.inset_top = insets["top"]
         root.inset_bottom = insets["bottom"]
         root.inset_left = insets["left"]
         root.inset_right = insets["right"]
+        # width_ = Window.width - root.inset_left - root.inset_right
+        # height_ = Window.height # - root.inset_bottom #- root.inset_top
+
+        # root.size= width_, height_
+        # root.pos= root.x + root.inset_left, root.inset_bottom
+
 
     Clock.schedule_once(_set, 0)
 

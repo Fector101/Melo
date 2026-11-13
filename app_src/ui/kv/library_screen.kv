@@ -2,23 +2,40 @@
 #:import THEME ui.theme
 
 <LibraryScreen>:
+    size_hint: [1,1]
     canvas.before:
         Color:
             rgba: THEME.BG
         Rectangle:
             pos: self.pos
             size: self.size
+
     BoxLayout:
+        id: main_container
         orientation: "vertical"
-        size_hint: None, None
-        pos: root.x + root.inset_left, root.y + root.inset_bottom
-        size: root.width - root.inset_left - root.inset_right, root.height - root.inset_top - root.inset_bottom
+#        size_hint:[1,1]
+        padding: [0, root.inset_top, 0, root.inset_bottom] # root.inset_top didn't work always received 0
+#        canvas.before:
+#            Color:
+#                rgba: [1,0,1,1]
+#            Rectangle:
+#                pos: self.pos
+#                size: self.size
+#        pos: root.x + root.inset_left, root.y + root.inset_bottom
+#        size: root.width - root.inset_left - root.inset_right, root.height - root.inset_top - root.inset_bottom
         BoxLayout:
             orientation: "vertical"
+            pos_hint: {"top":1}
             size_hint_y: None
             height: self.minimum_height
             padding: dp(15), dp(30), dp(15), dp(10)
             spacing: dp(15)
+#            canvas.before:
+#                Color:
+#                    rgba: [1,0,0,1]
+#                Rectangle:
+#                    pos: self.pos
+#                    size: self.size
             Label:
                 text: "Your Library"
                 bold: True
@@ -39,6 +56,8 @@
         RecycleView:
             id: songs
             viewclass: "SongRow"
+    #        size_hint_y: None
+    #        height:500
             RecycleBoxLayout:
                 orientation: "vertical"
                 default_size: None, dp(70)
@@ -50,4 +69,4 @@
     Fab:
         id: fab
         right: root.right - root.inset_right - dp(30)
-        y: root.y + root.inset_bottom + player_bar.height + dp(24)
+        y: root.y + root.inset_bottom + player_bar.top + dp(24)

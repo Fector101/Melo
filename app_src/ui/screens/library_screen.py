@@ -1,5 +1,5 @@
 """The library screen: the list of tracks, the player and the scan button."""
-
+from kivy.metrics import dp
 from kivy.properties import NumericProperty, StringProperty
 from kivy.uix.screenmanager import Screen
 
@@ -186,3 +186,6 @@ class LibraryScreen(Screen):
 
     def _on_is_scanning(self, _instance, value):
         self.ids.fab.disabled = value
+
+    def apply_padding(self, inset_top, inset_bottom):
+        self.ids.main_container.padding = [0, inset_top, 0, inset_bottom]

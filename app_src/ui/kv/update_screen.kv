@@ -83,9 +83,13 @@
             size: self.size
             radius: [self.radius]
 
+<UpdateScreen>:
+    UpdateContent:
+        id: main_container
+
 <UpdateContent>:
     orientation: 'vertical'
-    padding: dp(19) + root.inset_left, dp(8) + root.inset_top, dp(19) + root.inset_right, dp(10) + root.inset_bottom
+#    padding: dp(19), dp(8), dp(19), dp(10) updated in screen apply_padding
     spacing: dp(12)
     canvas.before:
         Color:

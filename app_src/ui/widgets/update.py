@@ -17,6 +17,7 @@ from kivy.uix.label import Label
 from kivy.uix.widget import Widget
 
 from ui import theme as THEME
+from kivy.core.window import Window
 
 #: The small palette used for contributor initials.
 AVATAR_TINTS = (
@@ -57,14 +58,14 @@ class UpdateChip(ButtonBehavior, Label):
 
     bg = ListProperty(list(THEME.UPDATE_ACCENT))
     radius = NumericProperty(dp(17))
-    parent = ObjectProperty(None)
+    parent_ = ObjectProperty(None)
     visible = BooleanProperty(False)
 
     def show(self):
         if not self.visible:
             self.visible = True
-            self.y = self.parent.height - self.height - dp(12) - self.parent.inset_top
-            self.parent.add_widget(self)
+            self.y = Window.height - self.height - dp(12) - self.parent_.inset_top
+            self.parent_.add_widget(self)
 
     def hide(self):
         if self.visible:

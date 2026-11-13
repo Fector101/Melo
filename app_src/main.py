@@ -27,6 +27,7 @@ from repositories.update_notification_repository import bind_update_intents, sch
 
 from ui import load_kv_files # TODO REMOVE, it's used for loading simple widgets
 from ui.screens.manager import MeloScreenManager
+from viewmodels.permissions_view_model import PermissionsViewModel
 
 android_notify_logger.setLevel(logging.WARNING)
 logger = logging.getLogger("melo")
@@ -52,7 +53,7 @@ class MeloApp(App):
         load_kv_files()
         
         self.screen_manager = MeloScreenManager()
-        self.screen_manager.current = "library"
+        self.screen_manager.current = "update"
 
         # Avoiding black after splash screen so waiting a bit before scan.
         Clock.schedule_once(self.on_startup_clock_scheduler,1)
@@ -70,6 +71,7 @@ class MeloApp(App):
         logger.info("starting: permission requests")
         self._setup_update_check_scheduler_and_bind_update_notification_listener()
 
+        self.screen_manager._create_library_screen()
         permissions_view_model = self.screen_manager.permissions_view_model
         library_view_model = self.screen_manager.library_view_model
 
