@@ -118,7 +118,7 @@ class MeloApp(App):
             threading.Thread(target=_check_updates, daemon=True).start()
 
     def on_stop(self):
-        update_view_model = self.screen_manager.update_view_model
+        update_view_model = getattr(self.screen_manager, "update_view_model", None)
         player_view_model = self.screen_manager.player_view_model
 
         if update_view_model is not None:
