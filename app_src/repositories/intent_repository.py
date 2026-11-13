@@ -1,3 +1,8 @@
+# # TODO 
+# class MyApp(App, CustomApp):
+#     def on_intent(self):
+#         # auto receicves intents
+
 import logging
 
 from android_notify.config import get_python_activity_context, on_android_platform
