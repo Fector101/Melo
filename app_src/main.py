@@ -22,6 +22,7 @@ from kivy.utils import platform
 
 from android_notify import logger as android_notify_logger
 
+from utlis.permissions import MeloPermissions
 from repositories.intent_repository import IntentRepository
 from repositories.update_notification_repository import bind_update_intents, schedule_background_check
 
@@ -70,17 +71,16 @@ class MeloApp(App):
         logger.info("starting: permission requests")
         self._setup_update_check_scheduler_and_bind_update_notification_listener()
 
-        permissions_view_model = self.screen_manager.permissions_view_model
         library_view_model = self.screen_manager.library_view_model
 
         def __ask_for_audio_permission_and_scan(*args):
-            if not permissions_view_model.has_audio_access():
+            if not MeloPermissions.has_audio_access():
                 library_view_model.set_status("Requesting audio access...")
-            permissions_view_model.request_audio_access(callback=lambda *_: library_view_model.scan())
+            MeloPermissions.request_audio_access(callback=lambda *_: library_view_model.scan())
 
-        if not permissions_view_model.has_notification_access():
+        if not MeloPermissions.has_notification_access():
             library_view_model.set_status("Requesting Notification Access...")
-            permissions_view_model.request_notification_access(callback=__ask_for_audio_permission_and_scan)
+            MeloPermissions.request_notification_access(callback=__ask_for_audio_permission_and_scan)
         else:
             __ask_for_audio_permission_and_scan()
 
@@ -108,7 +108,6 @@ class MeloApp(App):
 
             from viewmodels.update_view_model import UpdateViewModel
             from repositories.update_repository import UpdateRepository
-
             update_view_model = UpdateViewModel(UpdateRepository())
 
             if update_view_model.has_new_version:
