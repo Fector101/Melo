@@ -71,7 +71,7 @@ class MeloApp(App):
         logger.info("starting: permission requests")
         self._setup_update_check_scheduler_and_bind_update_notification_listener()
 
-        self.screen_manager._create_library_screen()
+        self.screen_manager.ensure_screen("library")
         permissions_view_model = self.screen_manager.permissions_view_model
         library_view_model = self.screen_manager.library_view_model
 
