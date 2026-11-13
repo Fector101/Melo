@@ -90,3 +90,23 @@ def after_apk_build(toolchain):
     #        if match is not None:
 #                return match.group(1)
   #  return None
+
+
+# <?xml version="1.0" encoding="utf-8"?>
+# <network-security-config>
+#     <domain-config cleartextTrafficPermitted="true">
+#         <domain>127.0.0.1</domain>
+#     </domain-config>
+# </network-security-config>
+
+
+# <?xml version="1.0" encoding="utf-8"?>
+# <!--
+#   Dev-only: lets the app reach a laptop-hosted release server over plain HTTP.
+#   This file is gitignored on purpose. app_src/android/p4a/hook.py only injects
+#   android:networkSecurityConfig when it exists, so CI and release builds that
+#   check out a clean tree ship no cleartext allowance at all.
+# -->
+# <network-security-config>
+#     <base-config cleartextTrafficPermitted="true" />
+# </network-security-config>

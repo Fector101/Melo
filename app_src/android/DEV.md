@@ -9,7 +9,7 @@
 ```
 ```shell
 PKG=io.github.fector101.melo
-REL=android_notify/media/__init__.py
+REL=core/insets.py
 adb push app_src/$REL /data/local/tmp/tmp.py && \
 adb shell "run-as $PKG sh -c 'cp /data/local/tmp/tmp.py files/app/$REL'" && \
 adb shell "run-as $PKG sh -c 'rm -f files/app/${REL%.*}.pyc'" 2>/dev/null && \

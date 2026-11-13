@@ -6,21 +6,20 @@ or parses the update UI.
 """
 
 import logging
-import os
 import webbrowser
 
 from kivy.animation import Animation
 from kivy.clock import Clock
 from kivy.core.window import Window
-from kivy.lang import Builder
 from kivy.metrics import dp
 from kivy.properties import (AliasProperty, ListProperty, NumericProperty,
                              StringProperty)
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
-from kivy.uix.modalview import ModalView
+from kivy.uix.screenmanager import Screen
 from kivy.utils import platform
 
+from ui import load_kv
 from ui import theme as THEME
 from ui.widgets.update import AVATAR_TINTS, UpdateAvatar
 
@@ -48,12 +47,7 @@ def _open_external(url):
 
 
 class UpdateContent(BoxLayout):
-    """The contents of the update modal."""
-
-    inset_top = NumericProperty(0)
-    inset_bottom = NumericProperty(0)
-    inset_left = NumericProperty(0)
-    inset_right = NumericProperty(0)
+    """The contents of the update screen."""
 
     version = StringProperty("")
     released = StringProperty("")
@@ -208,38 +202,29 @@ class UpdateContent(BoxLayout):
         _open_external(self.release_url)
 
 
-class UpdateScreen(ModalView):
+class UpdateScreen(Screen):
     """A full-window update screen driven by an :class:`UpdateViewModel`."""
-
-    inset_top = NumericProperty(0)
-    inset_bottom = NumericProperty(0)
-    inset_left = NumericProperty(0)
-    inset_right = NumericProperty(0)
 
     def __init__(self, view_model, **kwargs):
         super().__init__(**kwargs)
-        self.view_model = view_model
-        self.auto_dismiss = False
-        self.background_color = list(THEME.UPDATE_BG)
-        self.size_hint = (1, 1)
-        self._keyboard_bound = False
 
-        content = UpdateContent()
-        self.content = content
-        # ModalView has no ``content`` property (it is an AnchorLayout), so the
-        # assignment above only keeps the attribute for callers. Without this
-        # add_widget the content never enters the scene graph and the opened
-        # modal is just its dark background.
-        self.add_widget(content)
-        content.bind(on_back=self._on_back,
+        self.name = "update"
+        self.view_model = view_model
+        self.size_hint = (1, 1)
+
+        content = self.content
+        content.bind(on_back=self.on_back,
                      on_download=self._on_download,
                      on_cancel=self._on_cancel,
                      on_later=self._on_later,
                      on_install=self._on_install)
-        self.bind(on_dismiss=self._on_dismissed)
         self._bind_view_model()
-        self._bind_insets()
         self.view_model.load_details()
+
+    @property
+    def content(self):
+        """The ``UpdateContent`` the KV rule created for this screen."""
+        return self.ids.main_container
 
     def _bind_view_model(self):
         vm = self.view_model
@@ -264,42 +249,46 @@ class UpdateScreen(ModalView):
                 contributors=content.setter("contributors"),
                 failure_text=content.setter("failure_text"))
 
-    def _bind_insets(self):
-        content = self.content
-        for name in ("inset_top", "inset_bottom", "inset_left", "inset_right"):
-            setattr(content, name, getattr(self, name))
-            self.bind(**{name: content.setter(name)})
+    def apply_padding(self, inset_top, inset_bottom):
+        """Keep the layout clear of the system bars (Android 15+ edge-to-edge)."""
+        self.ids.main_container.padding = [
+            dp(19), inset_top + dp(8), dp(19), inset_bottom + dp(10)]
 
     # ------------------------------------------------------------------ #
-    # Modal lifecycle                                                     #
+    # Android back / desktop Escape                                       #
     # ------------------------------------------------------------------ #
-    def open(self, *args, **kwargs):
-        super().open(*args, **kwargs)
-        if not self._keyboard_bound:
-            Window.bind(on_keyboard=self._on_window_key)
-            self._keyboard_bound = True
+    def on_enter(self):
+        Window.bind(on_keyboard=self._on_window_key)
 
-    def _on_dismissed(self, *_):
-        if self._keyboard_bound:
-            Window.unbind(on_keyboard=self._on_window_key)
-            self._keyboard_bound = False
+    def on_leave(self):
+        Window.unbind(on_keyboard=self._on_window_key)
 
     def _on_window_key(self, _window, key, *_):
-        if key == 27:  # Android back / desktop Escape
-            self._on_back()
+        if key == 27:
+            self.on_back()
             return True
         return False
 
     # ------------------------------------------------------------------ #
     # Commands from the content                                           #
     # ------------------------------------------------------------------ #
-    def _on_back(self, *_):
+    def on_back(self, *_):
+        """Cancel a running download and return to the library."""
         if self.view_model.state == "downloading":
             self.view_model.cancel()
-        self.dismiss()
+        self._return_to_library()
+
+    def _return_to_library(self):
+        manager = self.manager
+        if manager is None:
+            return
+        library_screen = manager.get_screen("library") if manager.has_screen("library") else None
+        if library_screen is not None:
+            library_screen.show_update_chip(self.view_model.version)
+        manager.current = "library"
 
     def _on_later(self, *_):
-        self.dismiss()
+        self.on_back()
 
     def _on_download(self, *_):
         self.view_model.download()
@@ -311,8 +300,4 @@ class UpdateScreen(ModalView):
         self.view_model.install()
 
 
-_relative_to_module_folder=os.path.join("kv", "lazy", "update_screen.kv")
-_file_dirname = os.path.dirname(os.path.abspath(__file__))
-_upper_location = os.path.dirname(_file_dirname)
-_KV_PATH = os.path.join(str(_upper_location),_relative_to_module_folder )
-Builder.load_file(_KV_PATH)
+load_kv("update_screen.kv")

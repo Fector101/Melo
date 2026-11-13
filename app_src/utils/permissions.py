@@ -2,8 +2,6 @@
 
 import logging
 
-# from android_notify.config import on_android_platform
-
 logger = logging.getLogger("melo.permissions")
 
 from android_notify.internal.permissions import (ask_notification_permission,
@@ -12,10 +10,12 @@ from android_notify.internal.permissions import (ask_notification_permission,
 from android_notify.media.music.helper import MediaPermissionHandler
 
 
-class PermissionsRepository:
+class MeloPermissions:
     """Asks Android for the permission to read the audio library."""
 
-    def is_declared_in_manifest(self):
+    
+    @staticmethod
+    def is_declared_in_manifest():
         """Whether ``READ_MEDIA_AUDIO`` is declared in the manifest.
 
         A missing declaration is a build problem, not a runtime one, so the
@@ -27,7 +27,8 @@ class PermissionsRepository:
             logger.warning("manifest check failed: %s", error)
             return True
 
-    def has_audio_access(self):
+    @staticmethod
+    def has_audio_access():
         """Whether the app may read audio files right now."""
         try:
             return bool(MediaPermissionHandler.has_permission_to_access_audio_files())
@@ -35,14 +36,16 @@ class PermissionsRepository:
             logger.warning("audio access check failed: %s", error)
             return False
 
-    def request_audio_access(self, callback):
+    @staticmethod
+    def request_audio_access(callback):
         """Ask for the permission; ``callback(granted)`` reports the answer."""
         # if not on_android_platform():
         #     callback(True)
         MediaPermissionHandler.ask_permission_to_access_audio_files(
             callback=callback)
 
-    def has_notification_access(self):
+    @staticmethod
+    def has_notification_access():
         """Whether Android will show this app's notifications right now."""
         try:
             return bool(has_notification_permission())
@@ -50,7 +53,8 @@ class PermissionsRepository:
             logger.warning("notification permission check failed: %s", error)
             return True
 
-    def request_notification_access(self, callback=None):
+    @staticmethod
+    def request_notification_access(callback=None):
         """Ask for ``POST_NOTIFICATIONS`` (Android 13+; settings below that)."""
         try:
             ask_notification_permission(callback=callback)

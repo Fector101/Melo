@@ -5,9 +5,9 @@ import os
 from models.track import Track
 from repositories.artwork_repository import ArtworkRepository
 from repositories.library_repository import LibraryRepository
-from repositories.permissions_repository import PermissionsRepository
 from repositories.playback_repository import PlaybackRepository
 from ui.format import format_duration
+from utils.permissions import MeloPermissions
 
 
 # --------------------------------------------------------------------------- #
@@ -66,7 +66,7 @@ def test_the_artwork_is_not_extracted_off_android(tmp_path):
 # --------------------------------------------------------------------------- #
 def test_a_missing_manifest_check_is_not_fatal():
     # The check itself is optional; the app must not crash without it.
-    assert PermissionsRepository().is_declared_in_manifest() in (True, False)
+    assert MeloPermissions().is_declared_in_manifest() in (True, False)
 
 
 # --------------------------------------------------------------------------- #

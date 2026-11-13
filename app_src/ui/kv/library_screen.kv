@@ -2,19 +2,20 @@
 #:import THEME ui.theme
 
 <LibraryScreen>:
+    size_hint: [1,1]
     canvas.before:
         Color:
             rgba: THEME.BG
         Rectangle:
-            pos: self.pos
+            pos: 0,0#self.pos don't set to self.pos it cause lag in transition
             size: self.size
+
     BoxLayout:
+        id: main_container
         orientation: "vertical"
-        size_hint: None, None
-        pos: root.x + root.inset_left, root.y + root.inset_bottom
-        size: root.width - root.inset_left - root.inset_right, root.height - root.inset_top - root.inset_bottom
         BoxLayout:
             orientation: "vertical"
+            pos_hint: {"top":1}
             size_hint_y: None
             height: self.minimum_height
             padding: dp(15), dp(30), dp(15), dp(10)
@@ -49,5 +50,5 @@
             id: player_bar
     Fab:
         id: fab
-        right: root.right - root.inset_right - dp(30)
-        y: root.y + root.inset_bottom + player_bar.height + dp(24)
+        right: root.right - dp(30)
+        y: player_bar.top + dp(24)

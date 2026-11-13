@@ -17,6 +17,7 @@ import logging
 from android_notify.config import (get_package_name, get_python_activity_context,
                                    on_android_platform)
 from core.android_bridge import autoclass
+from repositories.intent_repository import IntentRepository
 
 logger = logging.getLogger("melo.update")
 
@@ -53,41 +54,10 @@ def schedule_background_check():
         _java_class("WorkScheduler").scheduleUpdateCheck(context)
         logger.info("Background update check scheduled")
         return True
-    except Exception:
-        logger.exception("Could not schedule the background update check")
+    except Exception as e:
+        logger.exception(f"Could not schedule the background update check: {e}")
         return False
 
-
-def read_update_intent(intent=None):
-    """Read an update-notification tap.
-
-    Returns ``{"action": "open_update", "version": "<version>"}`` when the
-    intent carries the notification's extra, otherwise an empty dict. The
-    extras are cleared afterwards so a re-created activity does not replay
-    the tap.
-    """
-    if not on_android_platform():
-        return {}
-    try:
-        if intent is None:
-            context = _context()
-            if context is None:
-                return {}
-            intent = context.getIntent()
-        if intent is None:
-            return {}
-        extras = intent.getExtras()
-        if extras is None:
-            return {}
-        action = extras.getString("action")
-        if action != UPDATE_ACTION:
-            return {}
-        version = extras.getString("version", "") or ""
-        intent.replaceExtras(None)
-        return {"action": action, "version": str(version)}
-    except Exception:
-        logger.exception("Could not read the update intent")
-        return {}
 
 
 def bind_update_intents(callback):
@@ -98,7 +68,7 @@ def bind_update_intents(callback):
         from android import activity  # type: ignore
 
         def on_new_intent(intent):
-            payload = read_update_intent(intent)
+            payload = IntentRepository.read_update_intent(intent)
             if payload:
                 callback(payload)
 

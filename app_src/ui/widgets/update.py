@@ -10,7 +10,7 @@ from math import atan2, cos, hypot, pi, sin, sqrt
 from kivy.graphics import Color, Line, Mesh
 from kivy.graphics.tesselator import TYPE_POLYGONS, WINDING_ODD, Tesselator
 from kivy.metrics import dp
-from kivy.properties import ListProperty, NumericProperty, StringProperty, ObjectProperty
+from kivy.properties import ListProperty, NumericProperty, StringProperty
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
@@ -57,6 +57,17 @@ class UpdateChip(ButtonBehavior, Label):
 
     bg = ListProperty(list(THEME.UPDATE_ACCENT))
     radius = NumericProperty(dp(17))
+
+    def show(self, parent):
+        """Add the chip to ``parent`` (once) and place it under the status bar."""
+        if self.parent is not parent:
+            parent.add_widget(self)
+        self.place(parent)
+
+    def place(self, parent):
+        """Keep the chip at the top-right corner of ``parent``."""
+        self.y = (parent.top - self.height - dp(12)
+                  - getattr(parent, "inset_top", 0))
 
 
 # --------------------------------------------------------------------------- #

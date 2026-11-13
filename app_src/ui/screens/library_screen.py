@@ -1,13 +1,13 @@
 """The library screen: the list of tracks, the player and the scan button."""
 
 from kivy.properties import NumericProperty, StringProperty
-from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.screenmanager import Screen
 
-from ui import widgets  # noqa: F401  (importing registers the widgets)
+from ui import load_kv, widgets  # noqa: F401  (importing registers the widgets)
 from ui.format import format_duration
 
 
-class LibraryScreen(FloatLayout):
+class LibraryScreen(Screen):
     """The root widget of the app.
 
     It binds to the view models and forwards the user's actions to them; it
@@ -16,8 +16,6 @@ class LibraryScreen(FloatLayout):
 
     inset_top = NumericProperty(0)
     inset_bottom = NumericProperty(0)
-    inset_left = NumericProperty(0)
-    inset_right = NumericProperty(0)
 
     #: The line under the heading.
     status_text = StringProperty("")
@@ -31,6 +29,7 @@ class LibraryScreen(FloatLayout):
         self.library = library
         self.player = player
         self._rows = []
+        self._update_chip = None
         self._bind_view_models()
         self._bind_widgets()
 
@@ -174,3 +173,39 @@ class LibraryScreen(FloatLayout):
 
     def _on_is_scanning(self, _instance, value):
         self.ids.fab.disabled = value
+
+    # ------------------------------------------------------------------ #
+    # The update chip                                                     #
+    # ------------------------------------------------------------------ #
+    def show_update_chip(self, version):
+        """Show (or re-show) the "update available" chip on this screen."""
+        if self._update_chip is None:
+            from ui.widgets.update import UpdateChip
+
+            self._update_chip = UpdateChip(
+                text=("Update available  \u00b7  " + str(version)).strip(),
+                on_release=self._on_update_chip,
+                pos_hint={"right": 0.98},
+            )
+            self.bind(size=self._place_update_chip,
+                      inset_top=self._place_update_chip)
+        self._update_chip.show(self)
+
+    def _place_update_chip(self, *_):
+        if self._update_chip is not None and self._update_chip.parent is not None:
+            self._update_chip.place(self)
+
+    def _on_update_chip(self, *_):
+        self.manager.current = "update"
+
+    # ------------------------------------------------------------------ #
+    # Insets                                                              #
+    # ------------------------------------------------------------------ #
+    def apply_padding(self, inset_top, inset_bottom):
+        """Keep the layout clear of the system bars (Android 15+ edge-to-edge)."""
+        self.inset_top = inset_top
+        self.inset_bottom = inset_bottom
+        self.ids.main_container.padding = [0, inset_top, 0, inset_bottom]
+
+
+load_kv("library_screen.kv")
