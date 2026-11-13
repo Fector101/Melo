@@ -142,7 +142,7 @@ class FakeLibrary:
 
 
 class FakePermissions:
-    """Stands in for the ``PermissionsRepository``."""
+    """Stands in for :class:`utils.permissions.MeloPermissions`."""
 
     def __init__(self, granted=False, declared=True):
         self.granted = granted
