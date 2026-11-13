@@ -1,16 +1,13 @@
 """The library screen: the list of tracks, the player and the scan button."""
-from kivy.metrics import dp
+import os
+
 from kivy.properties import NumericProperty, StringProperty
 from kivy.uix.screenmanager import Screen
+from kivy.lang import Builder
 
 from ui import widgets  # noqa: F401  (importing registers the widgets)
 from ui.format import format_duration
 
-
-
-import os
-
-from kivy.lang import Builder
 
 
 _relative_to_module_folder=os.path.join("kv", "library_screen.kv")

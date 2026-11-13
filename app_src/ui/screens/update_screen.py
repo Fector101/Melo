@@ -11,14 +11,12 @@ import webbrowser
 
 from kivy.animation import Animation
 from kivy.clock import Clock
-from kivy.core.window import Window
 from kivy.lang import Builder
 from kivy.metrics import dp
 from kivy.properties import (AliasProperty, ListProperty, NumericProperty,
                              StringProperty)
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
-from kivy.uix.modalview import ModalView
 from kivy.uix.screenmanager import Screen
 from kivy.utils import platform
 
@@ -222,10 +220,7 @@ class UpdateScreen(Screen):
 
         self.name = "update"
         self.view_model = view_model
-        self.auto_dismiss = False
-        self.background_color = list(THEME.UPDATE_BG)
         self.size_hint = (1, 1)
-        self._keyboard_bound = False
 
         content = self.ids.main_container
         self.content = content
@@ -235,7 +230,6 @@ class UpdateScreen(Screen):
                      on_later=self._on_later,
                      on_install=self._on_install)
         self._bind_view_model()
-        # self._bind_insets()
         self.view_model.load_details()
 
 

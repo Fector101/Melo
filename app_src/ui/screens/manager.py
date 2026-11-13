@@ -16,17 +16,14 @@ ScreenFactories = dict[str, ScreenFactory]
 class MeloScreenManager(ScreenManager):
     inset_top = NumericProperty(0)
     inset_bottom = NumericProperty(0)
-    inset_left = NumericProperty(0)
-    inset_right = NumericProperty(0)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # self.size_hint = (None, None)
         self._update_chip = None
         self._screen_factories: ScreenFactories = {
             "library": self.__create_library_screen,
             "update": self.__create_update_screen
         }
-        print("manager initialized")
         attach_insets(self) # Pad the UI clear of the status bar / nav buttons Android 15+
 
 
