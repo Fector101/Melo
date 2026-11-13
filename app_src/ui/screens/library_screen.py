@@ -28,8 +28,6 @@ class LibraryScreen(Screen):
 
     inset_top = NumericProperty(0)
     inset_bottom = NumericProperty(0)
-    inset_left = NumericProperty(0)
-    inset_right = NumericProperty(0)
 
     #: The line under the heading.
     status_text = StringProperty("")

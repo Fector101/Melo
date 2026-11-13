@@ -216,8 +216,6 @@ class UpdateScreen(Screen):
 
     inset_top = NumericProperty(0)
     inset_bottom = NumericProperty(0)
-    inset_left = NumericProperty(0)
-    inset_right = NumericProperty(0)
 
     def __init__(self, view_model, **kwargs):
         super().__init__(**kwargs)

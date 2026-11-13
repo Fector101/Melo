@@ -56,8 +56,6 @@
         RecycleView:
             id: songs
             viewclass: "SongRow"
-    #        size_hint_y: None
-    #        height:500
             RecycleBoxLayout:
                 orientation: "vertical"
                 default_size: None, dp(70)
@@ -68,5 +66,5 @@
             id: player_bar
     Fab:
         id: fab
-        right: root.right - root.inset_right - dp(30)
+        right: root.right - dp(30)
         y: root.y + root.inset_bottom + player_bar.top + dp(24)
