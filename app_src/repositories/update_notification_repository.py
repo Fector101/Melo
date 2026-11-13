@@ -68,7 +68,7 @@ def bind_update_intents(callback):
         from android import activity  # type: ignore
 
         def on_new_intent(intent):
-            payload = IntentRepository().read_update_intent(intent)
+            payload = IntentRepository.read_update_intent(intent)
             if payload:
                 callback(payload)
 
