@@ -49,7 +49,6 @@ class MeloScreenManager(ScreenManager):
 
         from viewmodels.library_view_model import LibraryViewModel
         from viewmodels.player_view_model import PlayerViewModel
-        from viewmodels.permissions_view_model import PermissionsViewModel
 
         from ui.screens.library_screen import LibraryScreen
 
@@ -58,11 +57,9 @@ class MeloScreenManager(ScreenManager):
         self.playback_repository = PlaybackRepository()
 
         # --- the view models: the state the UI renders -------------------
-        self.permissions_view_model = PermissionsViewModel()
         self.library_view_model = LibraryViewModel(
             self.library_repository,
             self.artwork_repository,
-            self.permissions_view_model,
         )
         self.player_view_model = PlayerViewModel(
             self.playback_repository,
@@ -73,13 +70,11 @@ class MeloScreenManager(ScreenManager):
         self.library_screen = LibraryScreen(self.library_view_model, self.player_view_model)
         library_screen = self.library_screen
         self.library_view_model.set_status("Starting...")
-        top=lambda _,__,screen=library_screen:self.do_inset_top(screen)
-        bottom = lambda _,__,screen=library_screen: self.do_inset_bottom(screen)
-        top(None,None,library_screen)
-        bottom(None,None,library_screen)
+
+        library_screen.apply_padding(self.inset_top, self.inset_bottom)
         self.bind(
-            inset_top = top,
-            inset_bottom = bottom
+            inset_top = lambda _,__,screen=library_screen:self.do_inset_top(screen),
+            inset_bottom = lambda _,__,screen=library_screen: self.do_inset_bottom(screen)
         )
         return library_screen
 
@@ -91,6 +86,7 @@ class MeloScreenManager(ScreenManager):
     def do_inset_bottom(self, screen):
         # screen.ids["main_container"].padding = [0, self.inset_top, 0, self.inset_bottom]
         screen.apply_padding(self.inset_top, self.inset_bottom)
+
     def __create_update_screen(self):
         from ui.screens.update_screen import UpdateScreen
         from viewmodels.update_view_model import UpdateViewModel
@@ -101,6 +97,7 @@ class MeloScreenManager(ScreenManager):
         self.update_repository = UpdateRepository()
         self.update_view_model = UpdateViewModel(self.update_repository)
         _update_screen = self._update_screen = UpdateScreen(self.update_view_model)
+        _update_screen.apply_padding(self.inset_top, self.inset_bottom)
         self.bind(
             inset_top=lambda _, __, screen=_update_screen: self.do_inset_top(screen),
             inset_bottom=lambda _, __, screen=_update_screen: self.do_inset_bottom(screen)

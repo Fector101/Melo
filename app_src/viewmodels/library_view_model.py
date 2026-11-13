@@ -13,6 +13,8 @@ from kivy.clock import Clock, mainthread
 from kivy.event import EventDispatcher
 from kivy.properties import BooleanProperty, ListProperty, StringProperty
 
+from utlis.permissions import MeloPermissions
+
 logger = logging.getLogger("melo.library")
 
 
@@ -28,16 +30,14 @@ class LibraryViewModel(EventDispatcher):
     #: Whether a scan is running right now.
     is_scanning = BooleanProperty(False)
 
-    def __init__(self, library_repository, artwork_repository, permissions_repository, **kwargs):
+    def __init__(self, library_repository, artwork_repository, **kwargs):
         """
         :param library: the :class:`LibraryRepository` to scan with.
         :param artwork: the :class:`ArtworkRepository` to read the covers from.
-        :param permissions: the :class:`PermissionsRepository` to ask with.
         """
         super().__init__(**kwargs)
         self._library = library_repository
         self._artwork = artwork_repository
-        self._permissions = permissions_repository
         self._scan_in_progress = False
         self._art_generation = 0  # bumped to abandon an outdated art worker
         self.register_event_type("on_artwork_ready")
@@ -57,17 +57,17 @@ class LibraryViewModel(EventDispatcher):
         if not on_android_platform():# comment out to scan on desktop
             self.status_text = "Scanning needs Android (device example)"
             return
-        if on_android_platform() and not self._permissions.is_declared_in_manifest():
+        if on_android_platform() and not MeloPermissions.is_declared_in_manifest():
             self.status_text = ("Audio permission missing from buildozer.spec "
                                 "(android.permissions = READ_MEDIA_AUDIO)")
             return
 
-        if on_android_platform() and self._permissions.has_audio_access():
+        if on_android_platform() and MeloPermissions.has_audio_access():
             self._start_scan()
             return
 
         self.status_text = "Requesting audio access..."
-        self._permissions.request_audio_access(self._on_permission)
+        MeloPermissions.request_audio_access(self._on_permission)
 
     @mainthread
     def set_status(self, text):
