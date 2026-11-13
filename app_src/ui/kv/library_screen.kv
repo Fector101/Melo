@@ -7,22 +7,12 @@
         Color:
             rgba: THEME.BG
         Rectangle:
-            pos: 0,0#self.pos
+            pos: 0,0#self.pos don't set to self.pos it cause lag in transition
             size: self.size
 
     BoxLayout:
         id: main_container
         orientation: "vertical"
-#        size_hint:[1,1]
-        padding: [0, root.inset_top, 0, root.inset_bottom] # root.inset_top didn't work always received 0
-#        canvas.before:
-#            Color:
-#                rgba: [1,0,1,1]
-#            Rectangle:
-#                pos: self.pos
-#                size: self.size
-#        pos: root.x + root.inset_left, root.y + root.inset_bottom
-#        size: root.width - root.inset_left - root.inset_right, root.height - root.inset_top - root.inset_bottom
         BoxLayout:
             orientation: "vertical"
             pos_hint: {"top":1}
@@ -30,12 +20,6 @@
             height: self.minimum_height
             padding: dp(15), dp(30), dp(15), dp(10)
             spacing: dp(15)
-#            canvas.before:
-#                Color:
-#                    rgba: [1,0,0,1]
-#                Rectangle:
-#                    pos: self.pos
-#                    size: self.size
             Label:
                 text: "Your Library"
                 bold: True
@@ -67,4 +51,4 @@
     Fab:
         id: fab
         right: root.right - dp(30)
-        y: root.y + root.inset_bottom + player_bar.top + dp(24)
+        y: player_bar.top + dp(24)

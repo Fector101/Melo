@@ -13,7 +13,7 @@ from kivy.clock import Clock, mainthread
 from kivy.event import EventDispatcher
 from kivy.properties import BooleanProperty, ListProperty, StringProperty
 
-from utlis.permissions import MeloPermissions
+from utils.permissions import MeloPermissions
 
 logger = logging.getLogger("melo.library")
 
@@ -32,8 +32,8 @@ class LibraryViewModel(EventDispatcher):
 
     def __init__(self, library_repository, artwork_repository, **kwargs):
         """
-        :param library: the :class:`LibraryRepository` to scan with.
-        :param artwork: the :class:`ArtworkRepository` to read the covers from.
+        :param library_repository: the :class:`LibraryRepository` to scan with.
+        :param artwork_repository: the :class:`ArtworkRepository` to read the covers from.
         """
         super().__init__(**kwargs)
         self._library = library_repository

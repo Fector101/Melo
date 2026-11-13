@@ -67,28 +67,26 @@ def read_insets(insets):
     Kivy lays out in pixels on Android, so the raw values slot straight into
     KV positions/sizes. ``getInsetsIgnoringVisibility`` keeps the padding
     stable while a bar is temporarily hidden (immersive swipe, keyboard).
+    The app is portrait-only, so only the vertical insets can be non-zero.
     """
     if autoclass("android.os.Build$VERSION").SDK_INT < 35:
-        return {"top": 0, "bottom": 0, "left": 0, "right": 0}
+        return {"top": 0, "bottom": 0}
 
     inset_type = autoclass("android.view.WindowInsets$Type")
     bars = inset_type.statusBars() | inset_type.navigationBars()
     system = insets.getInsetsIgnoringVisibility(bars)
     top, bottom = system.top, system.bottom
-    left, right = system.left, system.right
 
     try:
         cutout = insets.getDisplayCutout()
         if cutout is not None:
             top = max(top, cutout.getSafeInsetTop())
             bottom = max(bottom, cutout.getSafeInsetBottom())
-            left = max(left, cutout.getSafeInsetLeft())
-            right = max(right, cutout.getSafeInsetRight())
         else:
             logger.warning("cutout is None")
     except Exception as error:
         logger.debug("no display-cutout insets: %s", error)
-    return {"top": top, "bottom": bottom, "left": left, "right": right}
+    return {"top": top, "bottom": bottom}
 
 
 def _resource_inset_px(dimen_name):
@@ -96,34 +94,25 @@ def _resource_inset_px(dimen_name):
     try:
         resources = get_python_activity_context().getResources()
         res_id = resources.getIdentifier(dimen_name, "dimen", "android")
-        d=int(resources.getDimensionPixelSize(res_id)) if res_id else 0
-        print(f"dim: {d}")
-        return d
+        return int(resources.getDimensionPixelSize(res_id)) if res_id else 0
     except Exception as error:
         logger.debug("%s resource unavailable: %s", dimen_name, error)
         return 0
 
 
 def _fallback_insets():
-    return {"top": _resource_inset_px("status_bar_height"),
-            "bottom": _resource_inset_px("navigation_bar_height"),
-            "left": 0, "right": 0}
+    return {
+        "top": _resource_inset_px("status_bar_height"),
+        "bottom": _resource_inset_px("navigation_bar_height")
+        }
+
 
 def _apply_insets(root, insets):
     """Push insets onto the Kivy root from whichever thread reported them."""
 
-    print(root)
     def _set(_dt):
         root.inset_top = insets["top"]
         root.inset_bottom = insets["bottom"]
-        root.inset_left = insets["left"]
-        root.inset_right = insets["right"]
-        # width_ = Window.width - root.inset_left - root.inset_right
-        # height_ = Window.height # - root.inset_bottom #- root.inset_top
-
-        # root.size= width_, height_
-        # root.pos= root.x + root.inset_left, root.inset_bottom
-
 
     Clock.schedule_once(_set, 0)
 
