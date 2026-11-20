@@ -1,10 +1,12 @@
 """The drawn icons of the app.
 
-The glyphs are painted with canvas instructions instead of image files, so
+The transport glyphs (play/pause/next/prev) are baked, anti-aliased PNGs
+shipped as assets; the remaining glyphs are painted with canvas instructions so
 they stay sharp on every screen density and cost nothing to ship.
 """
 
 import math
+import os
 
 from kivy.graphics import Color, Ellipse, Line, Rectangle, Triangle
 from kivy.metrics import dp
@@ -13,6 +15,62 @@ from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.widget import Widget
 
 from ui.theme import FG
+
+# Baked glyphs are real PNG assets under app_src/assets (buildozer already
+# ships png files with the source). The __file__-relative lookup matches the
+# kv files and works from the extracted source dir on Android.
+_ASSETS_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "assets")
+_IMAGE_PATHS = {
+    "play": os.path.join(_ASSETS_DIR, "play.png"),
+    "pause": os.path.join(_ASSETS_DIR, "pause.png"),
+    "next": os.path.join(_ASSETS_DIR, "next.png"),
+    "prev": os.path.join(_ASSETS_DIR, "prev.png"),
+}
+_IMAGE_TEXTURES = {}
+
+# Size/position of each baked transport glyph, in dp. x/y are offsets from the
+# centred position (+y moves it up).
+_PLAY_IMG = {"w": dp(25), "h": dp(27), "x": dp(0), "y": dp(0.5)}
+_PAUSE_IMG = {"w": dp(24), "h": dp(25), "x": dp(-0.5), "y": dp(0)}
+_NEXT_IMG = {"w": dp(22), "h": dp(25), "x": dp(0), "y": dp(0)}
+_PREV_IMG = {"w": dp(22), "h": dp(25), "x": dp(0), "y": dp(0)}
+_BAKED_IMG = {
+    "play": _PLAY_IMG, "pause": _PAUSE_IMG,
+    "next": _NEXT_IMG, "prev": _PREV_IMG,
+}
+
+# Measured anchors (fractions of the quad's width/height) that centre the
+# visible glyph in its widget at any size.
+_IMAGE_SCALE = 8
+_IMAGE_TEX_SIZE = 512
+_IMAGE_ANCHOR_X = 0.453
+_IMAGE_ANCHOR_Y = 0.419
+
+
+def _baked_texture(name):
+    """Load a baked PNG once (power-of-two so mipmaps work on Android)."""
+    tex = _IMAGE_TEXTURES.get(name)
+    if tex is None:
+        from kivy.core.image import Image as CoreImage
+        from kivy.core.window import Window  # noqa: F401  (ensure a GL context)
+        tex = CoreImage(_IMAGE_PATHS[name], mipmap=True).texture
+        _IMAGE_TEXTURES[name] = tex
+    return tex
+
+
+def _baked_image_box(x, y, w, h, cfg):
+    """Place a baked glyph, centred, using its size/offset config."""
+    scale = w / 48.
+    base = _IMAGE_TEX_SIZE / float(_IMAGE_SCALE) * scale
+    quad_w = base
+    quad_h = base * (h / float(w))
+    cx = x + w / 2. + cfg["x"]
+    cy = y + h / 2. + cfg["y"]
+    pos = (cx - _IMAGE_ANCHOR_X * quad_w,
+           cy - _IMAGE_ANCHOR_Y * quad_h)
+    return pos, (quad_w, quad_h)
 
 
 class Icon(Widget):
@@ -44,6 +102,9 @@ class Icon(Widget):
     def glyph_box(self):
         """Where the glyph is drawn: the widget box, or ``glyph_size`` centred."""
         gw, gh = self.glyph_size
+        cfg = _BAKED_IMG.get(self.kind)
+        if cfg is not None:
+            gw, gh = cfg["w"], cfg["h"]
         if not gw or not gh:
             return self.x, self.y, self.width, self.height
         return (self.x + (self.width - gw) / 2.,
@@ -52,27 +113,24 @@ class Icon(Widget):
     def draw(self, *_):
         self.canvas.clear()
         x, y, w, h = self.glyph_box()
+        k = self.kind
+
+        # Build textures before opening the canvas context: the first render
+        # uses an offscreen FBO, which must not be nested inside this one.
+        tex = tex_pos = tex_size = None
+        cfg = _BAKED_IMG.get(k)
+        if cfg is not None:
+            tex = _baked_texture(k)
+            tex_pos, tex_size = _baked_image_box(x, y, w, h, cfg)
+
         with self.canvas:
             Color(*self.color)
-            k = self.kind
-            if k == "plus":
+            if cfg is not None:
+                Rectangle(pos=tex_pos, size=tex_size, texture=tex)
+            elif k == "plus":
                 t = dp(2)
                 Rectangle(pos=(x, y + h / 2 - t / 2), size=(w, t))
                 Rectangle(pos=(x + w / 2 - t / 2, y), size=(t, h))
-            elif k == "pause":
-                bw = w * .35
-                Rectangle(pos=(x + w * .14, y), size=(bw, h))
-                Rectangle(pos=(x + w * .72, y), size=(bw, h))
-            elif k == "play":
-                Triangle(points=[x + w * .15, y, x + w * .15, y + h,
-                                 x + w * 1.1, y + h / 2])
-            elif k == "prev":
-                Rectangle(pos=(x, y), size=(w * .12, h))
-                Triangle(points=[x + w, y, x + w, y + h,
-                                 x + w * .2, y + h / 2])
-            elif k == "next":
-                Rectangle(pos=(x + w * .88, y), size=(w * .12, h))
-                Triangle(points=[x, y, x, y + h, x + w * .8, y + h / 2])
             elif k == "repeat":
                 lw = dp(1.3)
                 L, R = x + w * .15, x + w * .85
