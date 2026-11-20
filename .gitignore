@@ -1,3 +1,5 @@
+android_notify
+tools
 .*/
 # The GitHub workflow and the version notes it publishes are part of the
 # source tree; the broad hidden-directory rule above would hide them.

@@ -14,29 +14,46 @@
         id: main_container
         orientation: "vertical"
         BoxLayout:
-            orientation: "vertical"
             pos_hint: {"top":1}
             size_hint_y: None
             height: self.minimum_height
             padding: dp(15), dp(30), dp(15), dp(10)
             spacing: dp(15)
-            Label:
-                text: "Your Library"
-                bold: True
-                font_size: "40sp"
-                halign: "left"
-                valign: "middle"
-                text_size: self.size
-            Label:
-                id: status
-                font_size: "18sp"
+            BoxLayout:
+                orientation:"vertical"
                 size_hint_y: None
-                height: dp(34)
-                halign: "left"
-                valign: "middle"
-                text_size: self.size
-                padding: dp(10), 0
-                text: root.status_text
+                height: self.minimum_height
+                spacing: dp(15)
+                Label:
+                    text: "Your Library"
+                    bold: True
+                    font_size: "40sp"
+                    halign: "left"
+                    valign: "middle"
+                    text_size: self.size
+                Label:
+                    id: status
+                    font_size: "18sp"
+                    size_hint_y: None
+                    height: dp(34)
+                    halign: "left"
+                    valign: "middle"
+                    text_size: self.size
+                    padding: dp(10), 0
+                    text: root.status_text or "0 songs added"
+            BoxLayout:# search and future settings btn container
+                size_hint: [None,None]
+                size: self.minimum_size
+                pos_hint:{"center_y":.85}
+                TransportIcon:
+                    kind: "search"
+                    size: dp(24), dp(24)
+                    on_release: setattr(root.manager,"current", "search")
+                
+                # Button:
+                #     text:"settings"
+                #     size_hint: [None,None]
+                #     size: [50,50]
         RecycleView:
             id: songs
             viewclass: "SongRow"
@@ -46,9 +63,11 @@
                 default_size_hint: 1, None
                 size_hint_y: None
                 height: self.minimum_height
-        Player:
-            id: player_bar
+        Widget:
+            id: player_slot
+            size_hint_y: None
+            height: THEME.PLAYER_HEIGHT
     Fab:
         id: fab
         right: root.right - dp(30)
-        y: player_bar.top + dp(24)
+        y: player_slot.top + dp(24)

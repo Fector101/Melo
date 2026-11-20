@@ -20,6 +20,7 @@ import threading
 from kivy.app import App
 from kivy.clock import Clock, mainthread
 from kivy.core.window import Window
+from kivy.uix.floatlayout import FloatLayout
 from kivy.utils import platform
 
 from android_notify import logger as android_notify_logger
@@ -30,6 +31,7 @@ from repositories.update_notification_repository import bind_update_intents, sch
 
 from ui import load_kv_files
 from ui.screens.manager import MeloScreenManager
+from ui.widgets.player_host import PlayerHost
 
 
 android_notify_logger.setLevel(logging.WARNING)
@@ -48,17 +50,25 @@ class MeloApp(App):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.screen_manager = None
+        self.player_host = None
         self._update_check_in_flight = False
 
     def build(self):
         load_kv_files()
-        
+
+        root = FloatLayout()
         self.screen_manager = MeloScreenManager()
+        root.add_widget(self.screen_manager)
         self.screen_manager.current = "library"
+
+        # One player bar for the whole app. It sits above the screens, so
+        # library -> search never creates a second Player widget.
+        self.player_host = PlayerHost(self.screen_manager.player_view_model, manager=self.screen_manager)
+        root.add_widget(self.player_host)
 
         # Avoiding black after splash screen so waiting a bit before scan.
         Clock.schedule_once(self.on_startup_clock_scheduler, 1)
-        return self.screen_manager
+        return root
 
     def on_startup_clock_scheduler(self, dt):
         # Bouncing the Clock so it doesn't interfere with UI generation,

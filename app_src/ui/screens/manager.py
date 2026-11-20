@@ -41,7 +41,8 @@ class MeloScreenManager(ScreenManager):
 
         self._screen_factories: ScreenFactories = {
             "library": self.__create_library_screen,
-            "update": self.__create_update_screen
+            "update": self.__create_update_screen,
+            "search": self.__create_search_screen
         }
         attach_insets(self) # Pad the UI clear of the status bar / nav buttons (Android 15+).
         self.bind(inset_top=self._apply_insets_to_screens, inset_bottom=self._apply_insets_to_screens)
@@ -125,6 +126,12 @@ class MeloScreenManager(ScreenManager):
             raise RuntimeError("the update check must run before the screen opens")
         cancel_notification()
         return UpdateScreen(self.update_view_model)
+
+    def __create_search_screen(self):
+        # The library screen always comes first, so its repositories and view
+        # models already exist and can be shared with the search screen.
+        from ui.screens.search_screen import SearchScreen
+        return SearchScreen(self.library_view_model, self.player_view_model)
 
     # ------------------------------------------------------------------ #
     # Insets                                                              #

@@ -1,0 +1,140 @@
+#:import dp kivy.metrics.dp
+#:import THEME ui.theme
+
+<PlayAllButton>:
+    size_hint: None, None
+    size: dp(112), dp(36)
+    opacity: 0 if self.disabled else 1
+    canvas.before:
+        Color:
+            rgba: THEME.TILE_BG
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(18)]
+    Icon:
+        kind: "play"
+        color: THEME.ACCENT
+        # size: dp(14), dp(20)
+        pos: [20,2]
+        halign:"center"
+        pos_hint: {"center_y": .5}
+    Label:
+        text: "Play all"
+        color: THEME.ACCENT
+        font_size: "14sp"
+        pos_hint: {"center_y": .5}
+        halign:"center"
+        text_size: self.width, None
+        size_hint_y: None
+        height: self.texture_size[1]
+
+<SearchScreen>:
+    size_hint: [1, 1]
+    canvas.before:
+        Color:
+            rgba: THEME.BG
+        Rectangle:
+            pos: 0, 0#self.pos causes lag during transitions
+            size: self.size
+
+    BoxLayout:
+        id: main_container
+        orientation: "vertical"
+        padding: dp(10), dp(40), dp(20), dp(8)
+
+        BoxLayout:
+            size_hint_y: None
+            height: dp(44)
+            spacing: dp(8)
+            TransportIcon:
+                id: back_button
+                kind: "back"
+                size: dp(44), dp(44)
+                glyph_size: dp(22), dp(22)
+                on_release: root.go_back()
+            BoxLayout:
+                padding: dp(14), 0, dp(8), 0
+                spacing: dp(10)
+                canvas.before:
+                    Color:
+                        rgba: THEME.TILE_BG
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [dp(12)]
+                Icon:
+                    kind: "search"
+                    color: THEME.FG_DIM
+                    size: dp(20), dp(20)
+                    pos_hint: {"center_y": .5}
+                TextInput:
+                    id: search_input
+                    hint_text: "Search songs or artists"
+                    multiline: False
+                    background_normal: ""
+                    background_active: ""
+                    background_color: 0, 0, 0, 0
+                    foreground_color: THEME.FG
+                    hint_text_color: THEME.FG_DIM
+                    cursor_color: THEME.ACCENT
+                    font_size: "16sp"
+                    padding: [0, max(0, (self.height - self.line_height) / 2), 0, 0]
+                    on_text: root.query = self.text
+                TransportIcon:
+                    id: clear_button
+                    kind: "close"
+                    size: dp(36), dp(36)
+                    glyph_size: dp(14), dp(14)
+                    color: THEME.FG_DIM
+                    opacity: 1 if root.query else 0
+                    disabled: not root.query
+                    on_release: root.clear_query()
+
+        BoxLayout:
+            size_hint_y: None
+            height: dp(44)
+            padding: dp(18), 0, dp(20), 0
+            spacing: dp(12)
+            Label:
+                id: result_count
+                text: root.result_count
+                font_size: "14sp"
+                color: THEME.FG_DIM
+                halign: "left"
+                pos_hint: {"center_y":.5}
+                
+                text_size: self.width, None
+                size_hint_y: None
+                height: self.texture_size[1]
+
+            PlayAllButton:
+                id: play_all
+                pos_hint: {"center_y": .5}
+                disabled: not root.has_results
+                on_release: root.play_all()
+            Widget:
+
+        RecycleView:
+            id: results
+            viewclass: "SongRow"
+            RecycleBoxLayout:
+                orientation: "vertical"
+                default_size: None, dp(70)
+                default_size_hint: 1, None
+                size_hint_y: None
+                height: self.minimum_height
+
+        Label:
+            id: empty_label
+            text: "No songs match your search"
+            font_size: "15sp"
+            color: THEME.FG_DIM
+            opacity: 0 if root.has_results else 1
+            size_hint_y: None
+            height: dp(80)
+
+        Widget:
+            id: player_slot
+            size_hint_y: None
+            height: THEME.PLAYER_HEIGHT

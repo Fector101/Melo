@@ -8,7 +8,9 @@ from kivy.metrics import dp
 from models.track import Track
 from ui import load_kv_files
 from ui.screens.library_screen import LibraryScreen
+from ui.widgets.icons import _PREV_IMG
 from ui.widgets.player import Player
+from ui.widgets.player_host import PlayerHost
 from viewmodels.library_view_model import LibraryViewModel
 from viewmodels.player_view_model import PlayerViewModel
 
@@ -23,7 +25,11 @@ def kv_rules():
 def screen(playback, artwork, library, permissions):
     library_vm = LibraryViewModel(library, artwork, permissions)
     player_vm = PlayerViewModel(playback, library_vm, artwork)
-    return LibraryScreen(library_vm, player_vm), library_vm, player_vm
+    view = LibraryScreen(library_vm, player_vm)
+    # The real app puts this in main.py; the fixture keeps it next to the
+    # screen so the existing player tests still exercise the same bindings.
+    view.player_host = PlayerHost(player_vm)
+    return view, library_vm, player_vm
 
 
 def make_tracks(count=3):
@@ -39,13 +45,17 @@ def test_the_screen_has_its_parts(screen):
     view, _, _ = screen
 
     assert "songs" in view.ids
-    assert "player_bar" in view.ids
+    assert "player_slot" in view.ids
     assert "fab" in view.ids
-    assert "prev_button" in view.ids.player_bar.ids
-    assert "play_button" in view.ids.player_bar.ids
-    assert "next_button" in view.ids.player_bar.ids
-    assert "repeat_button" in view.ids.player_bar.ids
-    assert "seek" in view.ids.player_bar.ids
+    # The screen only reserves space; the one real bar lives in PlayerHost.
+    assert not any(isinstance(widget, Player)
+                   for widget in view.walk(restrict=True))
+    bar = view.player_host.player
+    assert "prev_button" in bar.ids
+    assert "play_button" in bar.ids
+    assert "next_button" in bar.ids
+    assert "repeat_button" in bar.ids
+    assert "seek" in bar.ids
 
 
 # --------------------------------------------------------------------------- #
@@ -120,7 +130,7 @@ def test_the_player_bar_shows_what_the_player_reports(screen, immediate_clock):
 
     player_vm.play_track(library_vm.tracks[0])
 
-    player_bar = view.ids.player_bar
+    player_bar = view.player_host.player
     assert player_bar.title == "Track 0"
     assert player_bar.artist == "Artist 0"
     assert player_bar.playing is True
@@ -134,7 +144,7 @@ def test_the_position_moves_the_seek_bar(screen, immediate_clock):
 
     player_vm.position = 12.0
 
-    assert view.ids.player_bar.position == 12.0
+    assert view.player_host.player.position == 12.0
 
 
 def test_the_next_button_plays_the_next_track(screen, immediate_clock):
@@ -142,7 +152,7 @@ def test_the_next_button_plays_the_next_track(screen, immediate_clock):
     library_vm.tracks = make_tracks()
     player_vm.play_track(library_vm.tracks[0])
 
-    view.ids.player_bar.ids.next_button.dispatch("on_release", None)
+    view.player_host.player.ids.next_button.dispatch("on_release", None)
 
     assert player_vm.current_track is library_vm.tracks[1]
 
@@ -152,7 +162,7 @@ def test_the_play_button_pauses_the_playback(screen, immediate_clock):
     library_vm.tracks = make_tracks()
     player_vm.play_track(library_vm.tracks[0])
 
-    view.ids.player_bar.ids.play_button.dispatch("on_release", None)
+    view.player_host.player.ids.play_button.dispatch("on_release", None)
 
     assert player_vm.is_playing is False
 
@@ -160,7 +170,7 @@ def test_the_play_button_pauses_the_playback(screen, immediate_clock):
 def test_the_repeat_button_switches_the_loop(screen):
     view, _, player_vm = screen
 
-    view.ids.player_bar.ids.repeat_button.dispatch("on_release", None)
+    view.player_host.player.ids.repeat_button.dispatch("on_release", None)
 
     assert player_vm.loop_enabled is True
 
@@ -187,7 +197,7 @@ def test_the_transport_buttons_have_a_tap_area_bigger_than_their_glyphs():
                                       "next_button"))
     assert prev.right <= play.x      # the targets sit next to each other
     assert play.right <= next_.x     # without overlapping
-    assert prev.glyph_box()[0] == prev.x + (dp(44) - dp(16)) / 2.
+    assert prev.glyph_box()[0] == prev.x + (dp(44) - _PREV_IMG["w"]) / 2.
 
 
 def test_the_scan_button_starts_a_scan(screen):

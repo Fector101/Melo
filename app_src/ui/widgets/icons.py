@@ -1,4 +1,4 @@
-"""The drawn icons of the app.
+"""The icons of the app.
 
 The transport glyphs (play/pause/next/prev) are baked, anti-aliased PNGs
 shipped as assets; the remaining glyphs are painted with canvas instructions so
@@ -198,6 +198,42 @@ class Icon(Widget):
                 Rectangle(pos=(stems[0], top - bh),
                           size=(stems[1] + sw - stems[0], bh))
 
+            elif k == "search":
+                lw = dp(1.5)
+                cx, cy = x + w * .40, y + h * .62
+                radius = min(w, h) * .29
+                pts = []
+                for i in range(41):
+                    angle = math.radians(i * 360 / 40)
+                    pts += [cx + radius * math.cos(angle),
+                            cy + radius * math.sin(angle)]
+                Line(points=pts, width=lw, cap="round", joint="round")
+
+                hx = cx + radius * math.cos(math.radians(315))
+                hy = cy + radius * math.sin(math.radians(315))
+                Line(points=[hx, hy, x + w * .82, y + h * .18],
+                     width=lw, cap="round", joint="round")
+
+            elif k == "back":
+                lw = dp(1.8)
+                mid = y + h / 2
+                tip = x + w * .20
+                tip_y = mid
+                Line(points=[tip, tip_y, x + w * .82, tip_y],
+                     width=lw, cap="round", joint="round")
+                Line(points=[x + w * .45, mid + h * .27,
+                             tip, tip_y,
+                             x + w * .45, mid - h * .27],
+                     width=lw, cap="round", joint="round")
+
+            elif k == "close":
+                lw = dp(1.8)
+                Line(points=[x + w * .28, y + h * .28,
+                             x + w * .72, y + h * .72],
+                     width=lw, cap="round")
+                Line(points=[x + w * .72, y + h * .28,
+                             x + w * .28, y + h * .72],
+                     width=lw, cap="round")
 
 class TransportIcon(ButtonBehavior, Icon):
     """A drawn transport glyph that can be tapped (prev / play / next)."""
