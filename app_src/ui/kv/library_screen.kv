@@ -27,13 +27,13 @@
                 Label:
                     text: "Your Library"
                     bold: True
-                    font_size: "40sp"
+                    font_size: "35sp"
                     halign: "left"
                     valign: "middle"
                     text_size: self.size
                 Label:
                     id: status
-                    font_size: "18sp"
+                    font_size: "16sp"
                     size_hint_y: None
                     height: dp(34)
                     halign: "left"
@@ -47,7 +47,8 @@
                 pos_hint:{"center_y":.85}
                 TransportIcon:
                     kind: "search"
-                    size: dp(24), dp(24)
+                    size: dp(34), dp(34)
+                    glyph_size: dp(24), dp(24)
                     on_release: setattr(root.manager,"current", "search")
                 
                 # Button:
