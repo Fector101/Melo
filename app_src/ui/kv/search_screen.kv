@@ -3,32 +3,41 @@
 
 <PlayAllButton>:
     size_hint: None, None
-    size: dp(112), dp(36)
+    size: self.minimum_size
     opacity: 0 if self.disabled else 1
+    spacing:dp(8)
+    padding:[dp(16),dp(7),dp(10),dp(7)]
     canvas.before:
         Color:
             rgba: THEME.TILE_BG
         RoundedRectangle:
             pos: self.pos
             size: self.size
-            radius: [dp(18)]
+            radius: [dp(14)]
     Icon:
         kind: "play"
         color: THEME.ACCENT
-        # size: dp(14), dp(20)
-        pos: [20,2]
+        size_hint: [None, None]
+        size: dp(14), dp(20) # box; height >= painted glyph
+        glyph_scale: .6 # 25dp base → ~14dp painted quad
         halign:"center"
         pos_hint: {"center_y": .5}
     Label:
         text: "Play all"
+        # bold:True
         color: THEME.ACCENT
         font_size: "14sp"
         pos_hint: {"center_y": .5}
-        halign:"center"
+        # halign:"center"
         text_size: self.width, None
-        size_hint_y: None
+        size_hint: None,None
         height: self.texture_size[1]
-
+        # canvas.before:
+        #     Color:
+        #         rgba: [1,0,1,1]
+        #     Rectangle:
+        #         pos: self.pos
+        #         size: self.size
 <SearchScreen>:
     size_hint: [1, 1]
     canvas.before:
@@ -41,12 +50,15 @@
     BoxLayout:
         id: main_container
         orientation: "vertical"
-        padding: dp(10), dp(40), dp(20), dp(8)
-
+        padding: [0,0,0,0]
+        # spacing: dp(10) causes issue for invisible text that display when no reult
+# 
         BoxLayout:
             size_hint_y: None
             height: dp(44)
             spacing: dp(8)
+            padding: dp(8), 0, dp(15), 0
+            
             TransportIcon:
                 id: back_button
                 kind: "back"
@@ -90,12 +102,13 @@
                     opacity: 1 if root.query else 0
                     disabled: not root.query
                     on_release: root.clear_query()
+                    pos_hint:{"center_y":.5}
 
         BoxLayout:
             size_hint_y: None
-            height: dp(44)
-            padding: dp(18), 0, dp(20), 0
-            spacing: dp(12)
+            height: self.minimum_height
+            padding: dp(18), dp(10), dp(20), dp(10)
+            spacing: dp(10)
             Label:
                 id: result_count
                 text: root.result_count
@@ -103,17 +116,26 @@
                 color: THEME.FG_DIM
                 halign: "left"
                 pos_hint: {"center_y":.5}
-                
-                text_size: self.width, None
-                size_hint_y: None
-                height: self.texture_size[1]
+                size_hint: [None, None]
+                size: self.texture_size
 
             PlayAllButton:
                 id: play_all
                 pos_hint: {"center_y": .5}
                 disabled: not root.has_results
                 on_release: root.play_all()
-            Widget:
+
+        Label:
+            id: empty_label
+            text: "No songs match your search"
+            color: THEME.FG_DIM
+            pos_hint:{"center_y":.1}
+            size_hint_y:None
+            height: 0 if root.has_results else dp(30)
+            opacity: 0 if root.has_results else 1
+            valign:"center"
+            halign:"center"
+            pos_hint:{"center_x":.5}
 
         RecycleView:
             id: results
@@ -124,15 +146,7 @@
                 default_size_hint: 1, None
                 size_hint_y: None
                 height: self.minimum_height
-
-        Label:
-            id: empty_label
-            text: "No songs match your search"
-            font_size: "15sp"
-            color: THEME.FG_DIM
-            opacity: 0 if root.has_results else 1
-            size_hint_y: None
-            height: dp(80)
+                    
 
         Widget:
             id: player_slot

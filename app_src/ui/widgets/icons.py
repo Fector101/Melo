@@ -10,7 +10,7 @@ import os
 
 from kivy.graphics import Color, Ellipse, Line, Rectangle, Triangle
 from kivy.metrics import dp
-from kivy.properties import ListProperty, StringProperty
+from kivy.properties import ListProperty, NumericProperty, StringProperty
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.widget import Widget
 
@@ -81,11 +81,16 @@ class Icon(Widget):
     #: Size of the drawn glyph. ``(0, 0)`` means "use the widget size", so an
     #: icon can be given a tap area bigger than what it paints.
     glyph_size = ListProperty([0, 0])
+    #: Extra scale for the baked transport glyphs, which otherwise keep their
+    #: fixed dp size regardless of ``size``/``glyph_size``. ``1`` (default) is
+    #: the original size; only the widgets that set this are affected.
+    glyph_scale = NumericProperty(1.0)
 
     def __init__(self, **kw):
         super().__init__(**kw)
         self.bind(pos=self.draw, size=self.draw, kind=self.draw,
-                  color=self.draw, glyph_size=self.draw)
+                  color=self.draw, glyph_size=self.draw,
+                  glyph_scale=self.draw)
         self.draw()
 
     # Never deleting
@@ -103,12 +108,15 @@ class Icon(Widget):
         """Where the glyph is drawn: the widget box, or ``glyph_size`` centred."""
         gw, gh = self.glyph_size
         cfg = _BAKED_IMG.get(self.kind)
+        s = self.glyph_scale
+        ox = oy = 0
         if cfg is not None:
-            gw, gh = cfg["w"], cfg["h"]
+            gw, gh = cfg["w"] * s, cfg["h"] * s
+            ox, oy = cfg["x"] * s, cfg["y"] * s
         if not gw or not gh:
             return self.x, self.y, self.width, self.height
-        return (self.x + (self.width - gw) / 2.,
-                self.y + (self.height - gh) / 2., gw, gh)
+        return (self.x + (self.width - gw) / 2. + ox,
+                self.y + (self.height - gh) / 2. + oy, gw, gh)
 
     def draw(self, *_):
         self.canvas.clear()
@@ -121,7 +129,11 @@ class Icon(Widget):
         cfg = _BAKED_IMG.get(k)
         if cfg is not None:
             tex = _baked_texture(k)
-            tex_pos, tex_size = _baked_image_box(x, y, w, h, cfg)
+            draw_cfg = cfg
+            if self.glyph_scale != 1:
+                s = self.glyph_scale
+                draw_cfg = dict(cfg, x=cfg["x"] * s, y=cfg["y"] * s)
+            tex_pos, tex_size = _baked_image_box(x, y, w, h, draw_cfg)
 
         with self.canvas:
             Color(*self.color)

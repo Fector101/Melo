@@ -194,10 +194,14 @@ class SearchScreen(Screen):
         added, before this screen's own listener reports the real ones.
         """
         self.inset_top = inset_top
+        padded = self.inset_top
+        try:
+            padded = inset_top+10
+        except Exception as e:
+            print('e---------------->',e)
         self.inset_bottom = inset_bottom
         container = self.ids.main_container
-        container.padding = [container.padding[0], inset_top,
-                             container.padding[2], inset_bottom]
+        container.padding = [container.padding[0], padded, container.padding[2], inset_bottom]
 
     def _on_insets(self, *_):
         self.apply_padding(self.inset_top, self.inset_bottom)
