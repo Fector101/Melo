@@ -61,7 +61,7 @@ class PlayerViewModel(EventDispatcher):
         
         self.bind(current_track=self._on_current_track)
 
-        # self._library_viewmodel.bind(tracks=self._on_tracks_changed)
+        self._library_viewmodel.bind(tracks=self._on_tracks_changed)
 
         self._playback_repository.set_on_track_end(self._on_track_end)
         self._playback_repository.set_transport_callbacks(on_next=self.next_track, on_previous=self.previous_track)
@@ -87,6 +87,12 @@ class PlayerViewModel(EventDispatcher):
     def play_track(self, track):
         """Play ``track`` - a row of the list was tapped."""
         index = self._index_of(track)
+        if index is None and any(candidate.path == track.path
+                                 for candidate in self._library_viewmodel.tracks):
+            # The library is the default playlist; a screen that wants a
+            # narrower one sets it before calling play_track.
+            self._player_repo.current_playlist = self._library_viewmodel.tracks
+            index = self._index_of(track)
         if index is None:
             return
         self._index = index
@@ -228,9 +234,9 @@ class PlayerViewModel(EventDispatcher):
         self.artist = track.display_artist
         self.art = self._art_for(track.path)
 
-    # def _on_tracks_changed(self, _instance, _tracks):
-    #     """A new scan replaced the library: the playlist starts over."""
-    #     self._index = -1
+    def _on_tracks_changed(self, _instance, _tracks):
+        """A new scan replaced the library: the playlist starts over."""
+        self._index = -1
 
     def _art_for(self, path):
         """The cover of ``path`` when it is cached, else it is loaded async."""

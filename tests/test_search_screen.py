@@ -90,13 +90,13 @@ def test_typing_filters_the_results(screen):
     assert [row["path"] for row in view.ids.results.data] == ["/music/1.mp3"]
 
 
-def test_the_filter_matches_the_artist_and_the_album(screen):
+def test_the_filter_matches_the_artist(screen):
     view, _, _ = screen
 
     view.query = "ARTIST 2"
     assert [row["path"] for row in view.ids.results.data] == ["/music/2.mp3"]
 
-    view.query = "album 0"
+    view.query = "artist 0"
     assert [row["path"] for row in view.ids.results.data] == ["/music/0.mp3"]
 
 

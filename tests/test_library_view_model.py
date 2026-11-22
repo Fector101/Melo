@@ -4,12 +4,13 @@ import pytest
 
 from conftest import wait_for
 from models.track import Track
+from repositories.player_repository import PlayerRepository
 from viewmodels.library_view_model import LibraryViewModel
 
 
 @pytest.fixture
-def library_vm(library, artwork, permissions):
-    return LibraryViewModel(library, artwork, permissions)
+def library_vm(library, artwork):
+    return LibraryViewModel(library, artwork, PlayerRepository())
 
 
 def make_tracks(count=2):

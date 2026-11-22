@@ -20,8 +20,8 @@ class SearchScreen(Screen):
     """A live filter over the already-scanned library.
 
     The screen never scans or owns data: ``SearchViewModel`` supplies the
-    tracks and the player view model plays them, so next/previous still follow
-    the whole library, not just the filtered rows.
+    tracks and the player view model plays them. Playing a result makes the
+    current results the playlist, so next/previous walk the visible matches.
     """
 
     inset_top = NumericProperty(0)
@@ -47,6 +47,7 @@ class SearchScreen(Screen):
         self.player = player_view_model
 
         self._displayed_tracks_recycle_view_data = []
+        self._focus_event = None
 
         self.bind(
             query=lambda _, value: setattr(self.search_view_model,"user_input",value),
@@ -64,7 +65,7 @@ class SearchScreen(Screen):
 
     def display_found_tracks(self, instance, tracks):
         """Solely for displaying found tracks after a search"""
-        found_tracks = self.search_view_model.filtered_tracks_value
+        found_tracks = tracks
 
         current = self.player.current_track
         active_path = current.path if current else ""
@@ -100,7 +101,8 @@ class SearchScreen(Screen):
             self.ids.results.refresh_from_data()
 
     def _on_row_selected(self, path):
-        """A result was tapped: play it."""
+        """A result was tapped: play it with the current results as playlist."""
+        self.search_view_model.set_playlist_from_results()
         track = self.search_view_model.track_by_path(path)
         if track is not None:
             self.player.play_track(track) # don't pass another vm into a vm
@@ -114,8 +116,9 @@ class SearchScreen(Screen):
         self.query = ""
 
     def play_all(self, *_):
-        """Play the first result without changing the playlist."""
+        """Play the first result with the current results as the playlist."""
         if self.has_results:
+            self.search_view_model.set_playlist_from_results()
             path = self.search_view_model.filtered_tracks_value[0].path
             track = self.search_view_model.track_by_path(path)
             self.player.play_track(track)
@@ -130,10 +133,13 @@ class SearchScreen(Screen):
     # ------------------------------------------------------------------ #
     def on_enter(self,*args):
         Window.bind(on_keyboard=self._on_window_key)
-        Clock.schedule_once(self._focus_search, 0.15)
+        self._focus_event = Clock.schedule_once(self._focus_search, 0.15)
 
     def on_leave(self,*args):
         Window.unbind(on_keyboard=self._on_window_key)
+        if self._focus_event is not None:
+            self._focus_event.cancel()
+            self._focus_event = None
 
     def _focus_search(self, _dt):
         self.ids.search_input.focus = True

@@ -134,6 +134,8 @@ class FakeLibrary:
 
     def __init__(self, tracks=()):
         self.tracks = list(tracks)
+        self.cached_tracks = []
+        self.scan_in_progress = False
         self.scans = 0
 
     def scan(self):

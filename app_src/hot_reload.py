@@ -14,6 +14,7 @@ from ui import load_kv_files
 from repositories.artwork_repository import ArtworkRepository
 from repositories.library_repository import LibraryRepository
 from repositories.playback_repository import PlaybackRepository
+from repositories.player_repository import PlayerRepository
 from ui.screens.library_screen import LibraryScreen
 from viewmodels.library_view_model import LibraryViewModel
 from viewmodels.player_view_model import PlayerViewModel
@@ -49,14 +50,17 @@ class MDLive(App):
         self.library_repository = LibraryRepository()
         self.artwork_repository = ArtworkRepository()
         self.playback_repository = PlaybackRepository()
+        self.player_repository = PlayerRepository()
 
         self.library_view_model = LibraryViewModel(
                     self.library_repository,
                     self.artwork_repository,
+                    self.player_repository,
         )
         self.player_view_model = PlayerViewModel(
             self.playback_repository,
             self.library_view_model,
+            self.player_repository,
             self.artwork_repository,
         )
         return Factory.LibraryScreen(self.library_view_model,

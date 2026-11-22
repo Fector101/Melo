@@ -6,6 +6,7 @@ from kivy.clock import Clock
 from kivy.metrics import dp
 
 from models.track import Track
+from repositories.player_repository import PlayerRepository
 from ui import load_kv_files
 from ui.screens.library_screen import LibraryScreen
 from ui.widgets.icons import _PREV_IMG
@@ -22,9 +23,10 @@ def kv_rules():
 
 
 @pytest.fixture
-def screen(playback, artwork, library, permissions):
-    library_vm = LibraryViewModel(library, artwork, permissions)
-    player_vm = PlayerViewModel(playback, library_vm, artwork)
+def screen(playback, artwork, library):
+    player_repo = PlayerRepository()
+    library_vm = LibraryViewModel(library, artwork, player_repo)
+    player_vm = PlayerViewModel(playback, library_vm, player_repo, artwork)
     view = LibraryScreen(library_vm, player_vm)
     # The real app puts this in main.py; the fixture keeps it next to the
     # screen so the existing player tests still exercise the same bindings.
@@ -152,7 +154,7 @@ def test_the_next_button_plays_the_next_track(screen, immediate_clock):
     library_vm.tracks = make_tracks()
     player_vm.play_track(library_vm.tracks[0])
 
-    view.player_host.player.ids.next_button.dispatch("on_release", None)
+    view.player_host.player.ids.next_button.dispatch("on_release")
 
     assert player_vm.current_track is library_vm.tracks[1]
 
@@ -162,7 +164,7 @@ def test_the_play_button_pauses_the_playback(screen, immediate_clock):
     library_vm.tracks = make_tracks()
     player_vm.play_track(library_vm.tracks[0])
 
-    view.player_host.player.ids.play_button.dispatch("on_release", None)
+    view.player_host.player.ids.play_button.dispatch("on_release")
 
     assert player_vm.is_playing is False
 
@@ -170,7 +172,7 @@ def test_the_play_button_pauses_the_playback(screen, immediate_clock):
 def test_the_repeat_button_switches_the_loop(screen):
     view, _, player_vm = screen
 
-    view.player_host.player.ids.repeat_button.dispatch("on_release", None)
+    view.player_host.player.ids.repeat_button.dispatch("on_release")
 
     assert player_vm.loop_enabled is True
 
@@ -205,7 +207,7 @@ def test_the_scan_button_starts_a_scan(screen):
     calls = []
     library_vm.scan = lambda: calls.append(True)
 
-    view.ids.fab.dispatch("on_release", None)
+    view.ids.fab.dispatch("on_release")
 
     assert calls == [True]
 

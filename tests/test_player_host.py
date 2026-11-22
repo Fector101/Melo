@@ -7,6 +7,7 @@ from kivy.properties import NumericProperty, ObjectProperty
 from kivy.uix.screenmanager import Screen
 
 from models.track import Track
+from repositories.player_repository import PlayerRepository
 from ui import load_kv_files
 from ui.widgets.player import Player
 from ui.widgets.player_host import PLAYER_HEIGHT, PlayerHost
@@ -34,13 +35,15 @@ class InsetScreen(Screen):
 
 @pytest.fixture
 def host(playback, artwork, library):
-    library_vm = LibraryViewModel(library, artwork)
+    player_repo = PlayerRepository()
+    library_vm = LibraryViewModel(library, artwork, player_repo)
     library_vm.tracks = [
         Track(path=f"/music/{index}.mp3", title=f"Track {index}",
               artist="Artist", duration_ms=60000)
         for index in range(3)
     ]
-    player_vm = PlayerViewModel(playback, library_vm, artwork)
+    player_repo.current_playlist = library_vm.tracks
+    player_vm = PlayerViewModel(playback, library_vm, player_repo, artwork)
     manager = FakeManager()
     return PlayerHost(player_vm, manager=manager), player_vm, manager, library_vm
 

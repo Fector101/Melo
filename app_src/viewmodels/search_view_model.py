@@ -51,25 +51,23 @@ class SearchViewModel(EventDispatcher):
     def _init_tracks_after_initialization(self, tracks):
         self.tracks = tracks
         self.filtered_tracks_value = tracks
-        self.set_search_status_text("john cena")
+        self.__set_search_status_text_state()
 
     def filter_tracks(self, user_input):
-        """Filtering based on input against title, album and artist."""
+        """Filtering based on input against title and artist."""
         # `casefold` over lower so chars with alternative lowercases match properly
-        needle = (user_input or "").strip().casefold()
-        if not needle:
+        user_input = (user_input or "").strip().casefold()
+        if not user_input:
             self.filtered_tracks_value = self.tracks
+            self.__set_search_status_text_state()
             return
 
         filtered = []
         for track in self.tracks:
-            if (needle in track.title.casefold()
-                    or needle in track.artist.casefold()
-                    or needle in track.album.casefold()):
+            if (user_input in track.display_title.casefold() or user_input in track.display_artist.casefold()):
                 filtered.append(track)
         self.filtered_tracks_value = filtered
-        if not self.filtered_tracks_value:
-            self.set_search_status_text("No songs match your search")
+        self.__set_search_status_text_state()
 
     def cached_artwork(self, path):
         """The cover art of ``path`` when it is already known (no I/O)."""
@@ -77,12 +75,23 @@ class SearchViewModel(EventDispatcher):
 
     def track_by_path(self, path):
         """The track with ``path``, or ``None``."""
-        self.player_repo.current_playlist = self.filtered_tracks_value
         for track in self.tracks:
             if track.path == path:
                 return track
         return None
 
+    def set_playlist_from_results(self):
+        """Make the current results the playlist the player walks through."""
+        self.player_repo.current_playlist = self.filtered_tracks_value
+
     @mainthread
     def set_search_status_text(self, value):
         self.search_status_text = value
+
+    def __set_search_status_text_state(self):
+        if self.filtered_tracks_value:
+            self.set_search_status_text("")
+        elif self._library_repository.scan_in_progress:
+            self.set_search_status_text("scan ongoing...")
+        else:
+            self.set_search_status_text("No songs match your search")
