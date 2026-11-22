@@ -17,8 +17,25 @@ Why Kivy's own ``SoundLoader``:
 import logging
 
 from android_notify.config import on_android_platform
-from android_notify.media import MediaNotification
 logger = logging.getLogger("melo.playback")
+
+_MediaNotification = None
+
+
+def _media_notification():
+    """The notification class, imported only when a track starts playing.
+
+    ``android_notify.media`` (version 1.62.0 below) loads a dozen Java classes and registers JNI
+    proxies when it is imported. Nothing needs a notification until the first
+    ``set_now_playing()``, so keep that cost off the startup path.
+    """
+    global _MediaNotification
+    if _MediaNotification is None:
+        from android_notify.media import MediaNotification
+
+        _MediaNotification = MediaNotification
+    return _MediaNotification
+
 
 try:
     from kivy.core.audio_output import SoundLoader as KivySoundLoader
@@ -326,7 +343,7 @@ class PlaybackRepository:
         if self._controller is None:
             return
         
-        self._notification = MediaNotification(
+        self._notification = _media_notification()(
             mediaController=self._controller,
             on_next=self._on_next,
             on_previous=self._on_previous,
