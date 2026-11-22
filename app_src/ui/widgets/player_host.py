@@ -39,14 +39,13 @@ class PlayerHost(FloatLayout):
                   visible=self._place,
                   pos=self._place,
                   size=self._place)
-
-        if manager is not None:
-            manager.bind(current_screen=self._on_current_screen)
-            self._on_current_screen(manager, manager.current_screen)
+        
+        manager.bind(inset_bottom=self._on_screen_inset)
+        manager.bind(current_screen=self._on_current_screen)
+        self._on_current_screen(manager, manager.current_screen)
         self._place()
 
-    # ------------------------------------------------------------------ #
-    # The view model -> the widget                                        #
+    # The view model -> the widget reciveing data from vm
     # ------------------------------------------------------------------ #
     def _bind_view_model(self):
         vm = self.view_model
@@ -74,8 +73,7 @@ class PlayerHost(FloatLayout):
     def _on_position(self, _instance, value):
         self.player.position = value
 
-    # ------------------------------------------------------------------ #
-    # The widget -> the view model                                        #
+    # The widget -> the view model  sending data to vms
     # ------------------------------------------------------------------ #
     def _bind_widgets(self):
         vm = self.view_model
@@ -87,36 +85,16 @@ class PlayerHost(FloatLayout):
         ids.seek.on_seek_requested = vm.seek
         ids.seek.bind(seeking=lambda _widget, value: vm.set_seeking(value))
 
-    # ------------------------------------------------------------------ #
-    # Which screen is on top                                              #
-    # ------------------------------------------------------------------ #
     def _on_current_screen(self, _manager, screen):
-        previous = self._screen
-        if previous is screen:
-            return
-        if previous is not None and hasattr(previous, "inset_bottom"):
-            previous.unbind(inset_bottom=self._on_screen_inset)
-
         self._screen = screen
-        self.visible = getattr(screen, "name", None) in PLAYER_SCREENS
-
-        if screen is not None and hasattr(screen, "inset_bottom"):
-            screen.bind(inset_bottom=self._on_screen_inset)
-            self._on_screen_inset(screen, screen.inset_bottom)
-        else:
-            self.inset_bottom = 0
+        self.visible = screen.name in PLAYER_SCREENS
 
     def _on_screen_inset(self, _screen, value):
         self.inset_bottom = value
 
-    # ------------------------------------------------------------------ #
-    # Placement                                                           #
-    # ------------------------------------------------------------------ #
     def _place(self, *_):
         """Pin the bar to the bottom edge, above the navigation buttons."""
         bar = self.player
-        if bar is None:
-            return
         bar.width = self.width
         bar.height = PLAYER_HEIGHT
         y = self.inset_bottom if self.visible else -PLAYER_HEIGHT
