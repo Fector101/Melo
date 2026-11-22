@@ -19,9 +19,9 @@ class PlayAllButton(ButtonBehavior, BoxLayout):
 class SearchScreen(Screen):
     """A live filter over the already-scanned library.
 
-    The screen never scans or owns data: it reads ``library.tracks`` and uses
-    the existing player view model, so next/previous still follow the whole
-    library, not just the filtered rows.
+    The screen never scans or owns data: ``SearchViewModel`` supplies the
+    tracks and the player view model plays them, so next/previous still follow
+    the whole library, not just the filtered rows.
     """
 
     inset_top = NumericProperty(0)
@@ -35,48 +35,44 @@ class SearchScreen(Screen):
 
     has_results = BooleanProperty(False)
 
-    def __init__(self, library, player, **kwargs):
+    def __init__(self, search_view_model, player_view_model, **kwargs):
         """
-        :param library: the :class:`LibraryViewModel` with the track list.
-        :param player: the :class:`PlayerViewModel` used to play a result.
+        :param search_view_model: the :class:`SearchViewModel` with the tracks.
+        :param player_view_model: the :class:`PlayerViewModel` used to play a result.
         """
         super().__init__(**kwargs)
-        self.library = library
-        self.player = player
-        self._rows = []
-        self._matches = []
+        self.search_view_model = search_view_model
+        self.player = player_view_model
 
-        self.bind(query=self._on_query,
-                  inset_top=self._on_insets,
-                  inset_bottom=self._on_insets)
-        self.library.bind(tracks=self._on_tracks,
-                          on_artwork_ready=self._on_artwork_ready)
+        self._displayed_tracks_recycle_view_data = []
+
+        self.bind(
+            query=lambda _, value: setattr(self.search_view_model,"user_input",value),
+            inset_top=self._on_insets, inset_bottom=self._on_insets
+        )
         self.player.bind(current_track=self._on_current_track)
-
+        self.search_view_model.bind(filtered_tracks_value=self.display_found_tracks)
+        # The manager fills filtered_tracks_value before this screen binds, so
+        # seed the rows once here instead of waiting for the first keystroke.
+        self.display_found_tracks(self.search_view_model,
+                                  self.search_view_model.filtered_tracks_value)
         # The manager's inset forwarding is a no-op on this device, so this
         # screen owns its window insets directly (see core.insets).
         attach_insets(self)
-        self._apply_filter()
 
-    # ------------------------------------------------------------------ #
-    # Filtering                                                           #
-    # ------------------------------------------------------------------ #
-    @staticmethod
-    def _matches_query(track, query):
-        """Case-insensitive match on the fields a user would search for."""
-        needle = (query or "").strip().casefold()
-        if not needle:
-            return True
-        fields = (getattr(track, "display_title", ""),
-                  getattr(track, "display_artist", ""),
-                  getattr(track, "album", ""))
-        return any(needle in str(field or "").casefold() for field in fields)
+    def display_found_tracks(self, instance, tracks):
+        """Solely for displaying found tracks after a search"""
+        found_tracks = self.search_view_model.filtered_tracks_value
 
-    def _on_query(self, _instance, query):
-        self._apply_filter()
+        current = self.player.current_track
+        active_path = current.path if current else ""
 
-    def _on_tracks(self, *_):
-        self._apply_filter()
+        self._displayed_tracks_recycle_view_data = [self._row_for(track, active_path) for track in found_tracks]
+        self.ids.results.data = self._displayed_tracks_recycle_view_data
+
+        count = len(found_tracks)
+        self.result_count = f"{count} song{'' if count == 1 else 's'}"
+        self.has_results = bool(count)
 
     def _row_for(self, track, active_path):
         return {
@@ -84,54 +80,16 @@ class SearchScreen(Screen):
             "artist": track.display_artist,
             "duration": format_duration(track.duration_seconds),
             "path": track.path,
-            "art": self.library.cached_artwork(track.path),
+            "art": self.search_view_model.cached_artwork(track.path),
             "active": track.path == active_path,
             "on_select": self._on_row_selected,
         }
-
-    def _apply_filter(self):
-        """Rebuild the result rows from the current query."""
-        matches = [track for track in self.library.tracks
-                   if self._matches_query(track, self.query)]
-        self._matches = matches
-
-        current = self.player.current_track
-        active_path = current.path if current is not None else ""
-        self._rows = [self._row_for(track, active_path) for track in matches]
-        self.ids.results.data = self._rows
-
-        count = len(matches)
-        self.result_count = f"{count} song{'' if count == 1 else 's'}"
-        self.has_results = bool(matches)
-
-    def _on_artwork_ready(self, _instance, path, art):
-        """A cover was extracted: update the matching result row."""
-        target = None
-        for row in self._rows:
-            if row["path"] == path:
-                row["art"] = art
-                target = row
-                break
-        if target is None:
-            return
-
-        rv = self.ids.results
-        try:
-            adapter = getattr(rv, "view_adapter", None)
-            if adapter is not None and hasattr(adapter, "get_visible_view"):
-                for view in adapter.get_visible_view() or []:
-                    if getattr(view, "path", None) == path:
-                        view.art = art
-                        return
-        except Exception:
-            pass
-        rv.refresh_from_data()
 
     def _on_current_track(self, _instance, track):
         """Highlight the result that is playing."""
         active = track.path if track is not None else ""
         changed = False
-        for row in self._rows:
+        for row in self._displayed_tracks_recycle_view_data:
             is_active = row["path"] == active
             if row["active"] != is_active:
                 row["active"] = is_active
@@ -141,9 +99,9 @@ class SearchScreen(Screen):
 
     def _on_row_selected(self, path):
         """A result was tapped: play it."""
-        track = self.library.track_by_path(path)
+        track = self.search_view_model.track_by_path(path)
         if track is not None:
-            self.player.play_track(track)
+            self.player.play_track(track) # don't pass another vm into a vm
 
     # ------------------------------------------------------------------ #
     # Commands from the KV                                                #
@@ -155,8 +113,10 @@ class SearchScreen(Screen):
 
     def play_all(self, *_):
         """Play the first result without changing the playlist."""
-        if self._matches:
-            self.player.play_track(self._matches[0])
+        if self.has_results:
+            path = self.search_view_model.filtered_tracks_value[0].path
+            track = self.search_view_model.track_by_path(path)
+            self.player.play_track(track)
 
     def go_back(self, *_):
         """Return to the library screen."""
@@ -166,11 +126,11 @@ class SearchScreen(Screen):
     # ------------------------------------------------------------------ #
     # Android back / desktop Escape                                       #
     # ------------------------------------------------------------------ #
-    def on_enter(self):
+    def on_enter(self,*args):
         Window.bind(on_keyboard=self._on_window_key)
         Clock.schedule_once(self._focus_search, 0.15)
 
-    def on_leave(self):
+    def on_leave(self,*args):
         Window.unbind(on_keyboard=self._on_window_key)
 
     def _focus_search(self, _dt):
@@ -194,11 +154,7 @@ class SearchScreen(Screen):
         added, before this screen's own listener reports the real ones.
         """
         self.inset_top = inset_top
-        padded = self.inset_top
-        try:
-            padded = inset_top+10
-        except Exception as e:
-            print('e---------------->',e)
+        padded = inset_top + 10
         self.inset_bottom = inset_bottom
         container = self.ids.main_container
         container.padding = [container.padding[0], padded, container.padding[2], inset_bottom]

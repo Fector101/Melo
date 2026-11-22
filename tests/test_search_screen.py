@@ -5,12 +5,14 @@ import pytest
 from kivy.uix.screenmanager import Screen, ScreenManager
 
 from models.track import Track
+from repositories.player_repository import PlayerRepository
 from ui import load_kv_files
 from ui.screens.manager import MeloScreenManager
 from ui.screens.search_screen import SearchScreen
 from ui.widgets.player import Player
 from viewmodels.library_view_model import LibraryViewModel
 from viewmodels.player_view_model import PlayerViewModel
+from viewmodels.search_view_model import SearchViewModel
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -31,12 +33,25 @@ def make_tracks(count=3):
 
 
 @pytest.fixture
-def screen(library, artwork, playback):
+def screen(library, artwork, playback, immediate_clock):
     library.tracks = make_tracks()
-    library_vm = LibraryViewModel(library, artwork)
+    library.cached_tracks = library.tracks
+    player_repo = PlayerRepository()
+
+    library_vm = LibraryViewModel(
+        library_repository=library,
+        artwork_repository=artwork,
+        player_repo=player_repo,
+    )
     library_vm.tracks = library.tracks
-    player_vm = PlayerViewModel(playback, library_vm, artwork)
-    return SearchScreen(library_vm, player_vm), library_vm, player_vm
+    player_vm = PlayerViewModel(
+        playback_repository=playback,
+        library_view_model=library_vm,
+        player_repo=player_repo,
+        artwork_repository=artwork,
+    )
+    search_vm = SearchViewModel(library, artwork, player_repo)
+    return SearchScreen(search_vm, player_vm), library_vm, player_vm
 
 
 # --------------------------------------------------------------------------- #
@@ -138,17 +153,19 @@ def test_play_all_plays_the_first_match(screen, immediate_clock):
 def test_the_playing_result_is_highlighted(screen, immediate_clock):
     view, library_vm, player_vm = screen
 
+    library_vm.player_repo.current_playlist = library_vm.tracks
     player_vm.play_track(library_vm.tracks[2])
 
     assert [row["active"] for row in view.ids.results.data] == [
         False, False, True]
 
 
-def test_artwork_updates_the_matching_result(screen):
+def test_cached_artwork_is_used_for_the_rows(screen, artwork):
     view, _, _ = screen
 
-    view.library.dispatch("on_artwork_ready", path="/music/1.mp3",
-                          art="/cache/1.jpg")
+    artwork.art["/music/1.mp3"] = "/cache/1.jpg"
+    view.display_found_tracks(view.search_view_model,
+                              view.search_view_model.filtered_tracks_value)
 
     assert view.ids.results.data[1]["art"] == "/cache/1.jpg"
     assert view.ids.results.data[0]["art"] == ""
@@ -170,16 +187,19 @@ def test_the_back_button_returns_to_the_library(screen):
     assert manager.current == "library"
 
 
-def test_the_manager_factory_shares_both_view_models(screen):
+def test_the_manager_factory_wires_the_search_view_model(screen):
     _, library_vm, player_vm = screen
     fake_manager = type("FakeManager", (), {})()
-    fake_manager.library_view_model = library_vm
+    fake_manager.library_repository = library_vm._library
+    fake_manager.artwork_repository = library_vm._artwork
+    fake_manager.player_repo = library_vm.player_repo
     fake_manager.player_view_model = player_vm
 
     built = MeloScreenManager._MeloScreenManager__create_search_screen(
         fake_manager)
 
-    assert built.library is library_vm
+    assert isinstance(built.search_view_model, SearchViewModel)
+    assert built.search_view_model.tracks == library_vm.tracks
     assert built.player is player_vm
 
 
@@ -194,7 +214,7 @@ def test_insets_pad_the_screen_without_losing_horizontal_padding(screen):
     view.inset_top = 24
     view.inset_bottom = 16
 
-    assert list(container.padding) == [left, 24, right, 16]
+    assert list(container.padding) == [left, 34, right, 16]
 
 
 def test_apply_padding_is_safe_for_the_manager_to_call(screen):
@@ -205,4 +225,4 @@ def test_apply_padding_is_safe_for_the_manager_to_call(screen):
     view.apply_padding(30, 20)
 
     assert (view.inset_top, view.inset_bottom) == (30, 20)
-    assert list(container.padding) == [left, 30, right, 20]
+    assert list(container.padding) == [left, 40, right, 20]

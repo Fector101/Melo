@@ -16,6 +16,8 @@ class LibraryRepository:
     ``scan`` queries MediaStore, so it blocks and has to run on a worker
     thread. Off Android it returns an empty list.
     """
+    cached_tracks = [] # when entering search screen from library screen, waiting to scan again is not the right move, it takes time
+
 
     def scan(self):
         """Every audio track of the device, sorted by title."""
@@ -28,8 +30,7 @@ class LibraryRepository:
             return []
 
         resolver = context.getContentResolver()
-        uri = autoclass(
-            "android.provider.MediaStore$Audio$Media").EXTERNAL_CONTENT_URI
+        uri = autoclass("android.provider.MediaStore$Audio$Media").EXTERNAL_CONTENT_URI
         projection = ["_id", "title", "artist", "duration", "_data"]
         cursor = resolver.query(uri, projection, None, None, None)
         tracks = []
@@ -55,6 +56,7 @@ class LibraryRepository:
 
         tracks.sort(key=lambda track: track.display_title.lower())
         logger.info("scan complete: %d track(s)", len(tracks))
+        self.cached_tracks = tracks
         return tracks
 
     # def desktop_scan(self):
@@ -79,4 +81,5 @@ class LibraryRepository:
 
     #     tracks.sort(key=lambda track: track.display_title.lower())
     #     logger.info("desktop_scan complete: %d track(s)", len(tracks))
+    #     self.cached_tracks = tracks
     #     return tracks

@@ -93,6 +93,8 @@ class MeloScreenManager(ScreenManager):
         from repositories.artwork_repository import ArtworkRepository
         from repositories.library_repository import LibraryRepository
         from repositories.playback_repository import PlaybackRepository
+        from repositories.player_repository import PlayerRepository
+
         from ui.screens.library_screen import LibraryScreen
         from viewmodels.library_view_model import LibraryViewModel
         from viewmodels.player_view_model import PlayerViewModel
@@ -100,16 +102,19 @@ class MeloScreenManager(ScreenManager):
         self.library_repository = LibraryRepository()
         self.artwork_repository = ArtworkRepository()
         self.playback_repository = PlaybackRepository()
+        self.player_repo = PlayerRepository()
 
         # --- the view models: the state the UI renders -------------------
         self.library_view_model = LibraryViewModel(
-            self.library_repository,
-            self.artwork_repository,
+            library_repository=self.library_repository,
+            artwork_repository=self.artwork_repository,
+            player_repo=self.player_repo,
         )
         self.player_view_model = PlayerViewModel(
-            self.playback_repository,
-            self.library_view_model,
-            self.artwork_repository,
+            playback_repository=self.playback_repository,
+            library_view_model=self.library_view_model,
+            artwork_repository=self.artwork_repository,
+           player_repo= self.player_repo,
         )
 
         self.library_screen = LibraryScreen(self.library_view_model,
@@ -128,10 +133,19 @@ class MeloScreenManager(ScreenManager):
         return UpdateScreen(self.update_view_model)
 
     def __create_search_screen(self):
-        # The library screen always comes first, so its repositories and view
-        # models already exist and can be shared with the search screen.
+        # The library screen always comes first,
+        # so repositories (self.library_repository, self.artwork_repository) already exists
+        # and can be shared with the search screen viewmodel.
+
         from ui.screens.search_screen import SearchScreen
-        return SearchScreen(self.library_view_model, self.player_view_model)
+        from viewmodels.search_view_model import SearchViewModel
+
+        self.search_view_model = SearchViewModel(
+            library_repository=self.library_repository,
+            artwork_repository=self.artwork_repository,
+            player_repo=self.player_repo,
+        )
+        return SearchScreen(self.search_view_model, self.player_view_model)
 
     # ------------------------------------------------------------------ #
     # Insets                                                              #
