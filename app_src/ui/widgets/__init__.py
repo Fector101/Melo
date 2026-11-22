@@ -12,4 +12,4 @@ from ui.widgets.seek_slider import FillSlider
 from ui.widgets.song_row import SongRow
 from ui.widgets.player_host import PlayerHost
 
-__all__ = ("Art", "Fab", "FillSlider", "Icon", "Player", "SongRow","TransportIcon", "PlayerHost")
+__all__ = ("Art", "Fab", "FillSlider", "Icon", "Player", "SongRow", "TransportIcon", "PlayerHost")

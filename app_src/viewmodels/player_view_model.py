@@ -43,7 +43,7 @@ class PlayerViewModel(EventDispatcher):
     #: Whether the user is dragging the seek bar (the ticker keeps quiet).
     is_seeking = BooleanProperty(False)
 
-    def __init__(self, playback_repository, library_view_model,player_repo, artwork_repository, **kwargs):
+    def __init__(self, playback_repository, library_view_model, player_repo, artwork_repository, **kwargs):
         """
         :param playback: the :class:`PlaybackRepository` to play through.
         :param library: the :class:`LibraryViewModel` with the playlist.
@@ -61,7 +61,6 @@ class PlayerViewModel(EventDispatcher):
         
         self.bind(current_track=self._on_current_track)
 
-        # self._player_repo.bind(current_playlist=self._on_tracks_changed)
         # self._library_viewmodel.bind(tracks=self._on_tracks_changed)
 
         self._playback_repository.set_on_track_end(self._on_track_end)
@@ -229,9 +228,9 @@ class PlayerViewModel(EventDispatcher):
         self.artist = track.display_artist
         self.art = self._art_for(track.path)
 
-    def _on_tracks_changed(self, _instance, _tracks):
-        """A new scan replaced the library: the playlist starts over."""
-        self._index = -1
+    # def _on_tracks_changed(self, _instance, _tracks):
+    #     """A new scan replaced the library: the playlist starts over."""
+    #     self._index = -1
 
     def _art_for(self, path):
         """The cover of ``path`` when it is cached, else it is loaded async."""

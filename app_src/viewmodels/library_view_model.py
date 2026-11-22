@@ -55,9 +55,9 @@ class LibraryViewModel(EventDispatcher):
         """
         if self._scan_in_progress:
             return
-        # if not on_android_platform():# comment out to scan on desktop
-        #     self.status_text = "Scanning needs Android (device example)"
-        #     return
+        if not on_android_platform():# comment out to scan on desktop
+            self.status_text = "Scanning needs Android (device example)"
+            return
         if on_android_platform() and not MeloPermissions.is_declared_in_manifest():
             self.status_text = ("Audio permission missing from buildozer.spec "
                                 "(android.permissions = READ_MEDIA_AUDIO)")

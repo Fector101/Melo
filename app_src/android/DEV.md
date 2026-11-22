@@ -7,6 +7,7 @@
 
 
 ```
+io.github.fector101.kivyuritest
 ```shell
 PKG=io.github.fector101.melo
 REL=core/insets.py
