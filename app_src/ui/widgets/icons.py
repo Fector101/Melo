@@ -32,10 +32,10 @@ _IMAGE_TEXTURES = {}
 
 # Size/position of each baked transport glyph, in dp. x/y are offsets from the
 # centred position (+y moves it up).
-_PLAY_IMG = {"w": dp(25), "h": dp(27), "x": dp(0), "y": dp(0.5)}
-_PAUSE_IMG = {"w": dp(24), "h": dp(25), "x": dp(-0.5), "y": dp(0)}
-_NEXT_IMG = {"w": dp(22), "h": dp(25), "x": dp(0), "y": dp(0)}
-_PREV_IMG = {"w": dp(22), "h": dp(25), "x": dp(0), "y": dp(0)}
+_PLAY_IMG = {"w": dp(22), "h": dp(24), "x": dp(0), "y": dp(0)}
+_PAUSE_IMG = {"w": dp(21), "h": dp(22), "x": dp(-0.5), "y": dp(0)}
+_NEXT_IMG = {"w": dp(19), "h": dp(22), "x": dp(0), "y": dp(0)}
+_PREV_IMG = {"w": dp(19), "h": dp(22), "x": dp(0), "y": dp(0)}
 _BAKED_IMG = {
     "play": _PLAY_IMG, "pause": _PAUSE_IMG,
     "next": _NEXT_IMG, "prev": _PREV_IMG,
