@@ -1,4 +1,4 @@
-"""The drawn icons of the app.
+"""The icons of the app.
 
 The transport glyphs (play/pause/next/prev) are baked, anti-aliased PNGs
 shipped as assets; the remaining glyphs are painted with canvas instructions so
@@ -10,7 +10,7 @@ import os
 
 from kivy.graphics import Color, Ellipse, Line, Rectangle, Triangle
 from kivy.metrics import dp
-from kivy.properties import ListProperty, StringProperty
+from kivy.properties import ListProperty, NumericProperty, StringProperty
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.widget import Widget
 
@@ -32,10 +32,10 @@ _IMAGE_TEXTURES = {}
 
 # Size/position of each baked transport glyph, in dp. x/y are offsets from the
 # centred position (+y moves it up).
-_PLAY_IMG = {"w": dp(25), "h": dp(27), "x": dp(0), "y": dp(0.5)}
-_PAUSE_IMG = {"w": dp(24), "h": dp(25), "x": dp(-0.5), "y": dp(0)}
-_NEXT_IMG = {"w": dp(22), "h": dp(25), "x": dp(0), "y": dp(0)}
-_PREV_IMG = {"w": dp(22), "h": dp(25), "x": dp(0), "y": dp(0)}
+_PLAY_IMG = {"w": dp(22), "h": dp(24), "x": dp(0), "y": dp(0)}
+_PAUSE_IMG = {"w": dp(21), "h": dp(22), "x": dp(-0.5), "y": dp(0)}
+_NEXT_IMG = {"w": dp(19), "h": dp(22), "x": dp(0), "y": dp(0)}
+_PREV_IMG = {"w": dp(19), "h": dp(22), "x": dp(0), "y": dp(0)}
 _BAKED_IMG = {
     "play": _PLAY_IMG, "pause": _PAUSE_IMG,
     "next": _NEXT_IMG, "prev": _PREV_IMG,
@@ -81,11 +81,16 @@ class Icon(Widget):
     #: Size of the drawn glyph. ``(0, 0)`` means "use the widget size", so an
     #: icon can be given a tap area bigger than what it paints.
     glyph_size = ListProperty([0, 0])
+    #: Extra scale for the baked transport glyphs, which otherwise keep their
+    #: fixed dp size regardless of ``size``/``glyph_size``. ``1`` (default) is
+    #: the original size; only the widgets that set this are affected.
+    glyph_scale = NumericProperty(1.0)
 
     def __init__(self, **kw):
         super().__init__(**kw)
         self.bind(pos=self.draw, size=self.draw, kind=self.draw,
-                  color=self.draw, glyph_size=self.draw)
+                  color=self.draw, glyph_size=self.draw,
+                  glyph_scale=self.draw)
         self.draw()
 
     # Never deleting
@@ -103,12 +108,15 @@ class Icon(Widget):
         """Where the glyph is drawn: the widget box, or ``glyph_size`` centred."""
         gw, gh = self.glyph_size
         cfg = _BAKED_IMG.get(self.kind)
+        s = self.glyph_scale
+        ox = oy = 0
         if cfg is not None:
-            gw, gh = cfg["w"], cfg["h"]
+            gw, gh = cfg["w"] * s, cfg["h"] * s
+            ox, oy = cfg["x"] * s, cfg["y"] * s
         if not gw or not gh:
             return self.x, self.y, self.width, self.height
-        return (self.x + (self.width - gw) / 2.,
-                self.y + (self.height - gh) / 2., gw, gh)
+        return (self.x + (self.width - gw) / 2. + ox,
+                self.y + (self.height - gh) / 2. + oy, gw, gh)
 
     def draw(self, *_):
         self.canvas.clear()
@@ -121,7 +129,11 @@ class Icon(Widget):
         cfg = _BAKED_IMG.get(k)
         if cfg is not None:
             tex = _baked_texture(k)
-            tex_pos, tex_size = _baked_image_box(x, y, w, h, cfg)
+            draw_cfg = cfg
+            if self.glyph_scale != 1:
+                s = self.glyph_scale
+                draw_cfg = dict(cfg, x=cfg["x"] * s, y=cfg["y"] * s)
+            tex_pos, tex_size = _baked_image_box(x, y, w, h, draw_cfg)
 
         with self.canvas:
             Color(*self.color)
@@ -198,6 +210,42 @@ class Icon(Widget):
                 Rectangle(pos=(stems[0], top - bh),
                           size=(stems[1] + sw - stems[0], bh))
 
+            elif k == "search":
+                lw = dp(1.5)
+                cx, cy = x + w * .40, y + h * .62
+                radius = min(w, h) * .29
+                pts = []
+                for i in range(41):
+                    angle = math.radians(i * 360 / 40)
+                    pts += [cx + radius * math.cos(angle),
+                            cy + radius * math.sin(angle)]
+                Line(points=pts, width=lw, cap="round", joint="round")
+
+                hx = cx + radius * math.cos(math.radians(315))
+                hy = cy + radius * math.sin(math.radians(315))
+                Line(points=[hx, hy, x + w * .82, y + h * .18],
+                     width=lw, cap="round", joint="round")
+
+            elif k == "back":
+                lw = dp(1.8)
+                mid = y + h / 2
+                tip = x + w * .20
+                tip_y = mid
+                Line(points=[tip, tip_y, x + w * .82, tip_y],
+                     width=lw, cap="round", joint="round")
+                Line(points=[x + w * .45, mid + h * .27,
+                             tip, tip_y,
+                             x + w * .45, mid - h * .27],
+                     width=lw, cap="round", joint="round")
+
+            elif k == "close":
+                lw = dp(1.8)
+                Line(points=[x + w * .28, y + h * .28,
+                             x + w * .72, y + h * .72],
+                     width=lw, cap="round")
+                Line(points=[x + w * .72, y + h * .28,
+                             x + w * .28, y + h * .72],
+                     width=lw, cap="round")
 
 class TransportIcon(ButtonBehavior, Icon):
     """A drawn transport glyph that can be tapped (prev / play / next)."""

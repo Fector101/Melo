@@ -43,24 +43,11 @@ class LibraryScreen(Screen):
                      is_scanning=self._on_is_scanning)
         library.bind(on_artwork_ready=self._on_artwork_ready)
 
-        player = self.player
-        player.bind(title=self._on_player_state,
-                    artist=self._on_player_state,
-                    art=self._on_player_state,
-                    is_playing=self._on_player_state,
-                    duration=self._on_player_state,
-                    loop_enabled=self._on_player_state,
-                    current_track=self._on_current_track,
-                    position=self._on_position)
+        # The app-wide PlayerHost owns the player-widget bindings. This screen
+        # only needs current_track to highlight the row that is playing.
+        self.player.bind(current_track=self._on_current_track)
 
     def _bind_widgets(self):
-        player_bar = self.ids.player_bar
-        player_bar.ids.prev_button.bind(on_release=self._on_previous)
-        player_bar.ids.play_button.bind(on_release=self._on_toggle_play_pause)
-        player_bar.ids.next_button.bind(on_release=self._on_next)
-        player_bar.ids.repeat_button.bind(on_release=self._on_toggle_loop)
-        player_bar.ids.seek.on_seek_requested = self._on_seek
-        player_bar.ids.seek.bind(seeking=self._on_seeking)
         self.ids.fab.bind(on_release=self._on_scan)
 
     # ------------------------------------------------------------------ #
@@ -125,45 +112,8 @@ class LibraryScreen(Screen):
             self.ids.songs.refresh_from_data()
 
     # ------------------------------------------------------------------ #
-    # The player                                                          #
+    # The scan button (player controls live in the app-wide PlayerHost)   #
     # ------------------------------------------------------------------ #
-    def _on_player_state(self, _instance, _value):
-        """Show what the player view model reports."""
-        player_bar = self.ids.player_bar
-        player_bar.title = self.player.title
-        player_bar.artist = self.player.artist
-        player_bar.art = self.player.art
-        player_bar.playing = self.player.is_playing
-        player_bar.loop_on = self.player.loop_enabled
-        player_bar.total = self.player.duration
-
-    def _on_position(self, _instance, value):
-        """Move the seek bar."""
-        self.ids.player_bar.position = value
-
-    def _on_seek(self, seconds):
-        """The user let go of the seek bar."""
-        self.player.seek(seconds)
-
-    def _on_seeking(self, _instance, value):
-        """The user is dragging the seek bar."""
-        self.player.set_seeking(value)
-
-    # ------------------------------------------------------------------ #
-    # The buttons                                                         #
-    # ------------------------------------------------------------------ #
-    def _on_previous(self, *_):
-        self.player.previous_track()
-
-    def _on_toggle_play_pause(self, *_):
-        self.player.toggle_play_pause()
-
-    def _on_next(self, *_):
-        self.player.next_track()
-
-    def _on_toggle_loop(self, *_):
-        self.player.toggle_loop()
-
     def _on_scan(self, *_):
         """The scan button was tapped."""
         self.library.scan()

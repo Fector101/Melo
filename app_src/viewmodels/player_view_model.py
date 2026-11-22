@@ -43,7 +43,7 @@ class PlayerViewModel(EventDispatcher):
     #: Whether the user is dragging the seek bar (the ticker keeps quiet).
     is_seeking = BooleanProperty(False)
 
-    def __init__(self, playback_repository, library_viewmodel, artwork_repository, **kwargs):
+    def __init__(self, playback_repository, library_view_model, player_repo, artwork_repository, **kwargs):
         """
         :param playback: the :class:`PlaybackRepository` to play through.
         :param library: the :class:`LibraryViewModel` with the playlist.
@@ -51,7 +51,8 @@ class PlayerViewModel(EventDispatcher):
         """
         super().__init__(**kwargs)
         self._playback_repository = playback_repository
-        self._library_viewmodel = library_viewmodel
+        self._library_viewmodel = library_view_model
+        self._player_repo = player_repo
         self._artwork_repository = artwork_repository
         self._index = -1
         self._tick = None
@@ -61,7 +62,7 @@ class PlayerViewModel(EventDispatcher):
         self.bind(current_track=self._on_current_track)
 
         self._library_viewmodel.bind(tracks=self._on_tracks_changed)
-        
+
         self._playback_repository.set_on_track_end(self._on_track_end)
         self._playback_repository.set_transport_callbacks(on_next=self.next_track, on_previous=self.previous_track)
         self._playback_repository.set_on_playing_state_change(self._set_playing_state)
@@ -86,6 +87,12 @@ class PlayerViewModel(EventDispatcher):
     def play_track(self, track):
         """Play ``track`` - a row of the list was tapped."""
         index = self._index_of(track)
+        if index is None and any(candidate.path == track.path
+                                 for candidate in self._library_viewmodel.tracks):
+            # The library is the default playlist; a screen that wants a
+            # narrower one sets it before calling play_track.
+            self._player_repo.current_playlist = self._library_viewmodel.tracks
+            index = self._index_of(track)
         if index is None:
             return
         self._index = index
@@ -95,7 +102,7 @@ class PlayerViewModel(EventDispatcher):
         """Start or pause the playback."""
         if not self._playback_repository.has_controller:
             # Nothing loaded yet - play the first track if we have any.
-            tracks = self._library_viewmodel.tracks
+            tracks = self._player_repo.current_playlist
             if tracks and self._index < 0:
                 self._index = 0
                 self._load_current()
@@ -115,7 +122,7 @@ class PlayerViewModel(EventDispatcher):
 
     def next_track(self):
         """Play the next track of the list."""
-        tracks = self._library_viewmodel.tracks
+        tracks = self._player_repo.current_playlist
         if not tracks:
             return
         if self._index + 1 < len(tracks):
@@ -126,7 +133,7 @@ class PlayerViewModel(EventDispatcher):
 
     def previous_track(self):
         """Play the previous track - or restart the current one."""
-        tracks = self._library_viewmodel.tracks
+        tracks = self._player_repo.current_playlist
         if not tracks:
             return
         if _should_prev_button_only_restart_playing_song(self._playback_repository):
@@ -168,13 +175,13 @@ class PlayerViewModel(EventDispatcher):
 
     def _current(self):
         """The track that should be playing (None when there is none)."""
-        tracks = self._library_viewmodel.tracks
+        tracks = self._player_repo.current_playlist
         if 0 <= self._index < len(tracks):
             return tracks[self._index]
         return None
 
     def _index_of(self, track):
-        for index, candidate in enumerate(self._library_viewmodel.tracks):
+        for index, candidate in enumerate(self._player_repo.current_playlist):
             if candidate.path == track.path:
                 return index
         return None
@@ -214,7 +221,7 @@ class PlayerViewModel(EventDispatcher):
         self.position = 0.0
         self._pending_seek = None
         self._last_pos = 0.0
-        self._library_viewmodel.set_status(f"Track {self._index + 1} / {len(self._library_viewmodel.tracks)}")
+        self._library_viewmodel.set_status(f"Track {self._index + 1} / {len(self._player_repo.current_playlist)}")
 
     def _on_current_track(self, _instance, track):
         """The loaded track changed: show its title, artist and cover."""

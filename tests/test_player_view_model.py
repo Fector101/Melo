@@ -4,6 +4,7 @@ import pytest
 from kivy.clock import Clock
 
 from models.track import Track
+from repositories.player_repository import PlayerRepository
 from viewmodels.player_view_model import PlayerViewModel
 
 
@@ -23,9 +24,11 @@ def tracks(library):
 def player(playback, library, artwork, tracks):
     from viewmodels.library_view_model import LibraryViewModel
 
-    library_vm = LibraryViewModel(library, artwork, None)
+    player_repo = PlayerRepository()
+    library_vm = LibraryViewModel(library, artwork, player_repo)
     library_vm.tracks = tracks  # the playlist the player works on
-    return PlayerViewModel(playback, library_vm, artwork)
+    player_repo.current_playlist = tracks
+    return PlayerViewModel(playback, library_vm, player_repo, artwork)
 
 
 # --------------------------------------------------------------------------- #

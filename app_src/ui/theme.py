@@ -4,7 +4,12 @@ They live here so that the KV rules and the widgets read the same values,
 without the widgets having to reach for the running app.
 """
 
+from kivy.metrics import dp
 from kivy.utils import get_color_from_hex as hex_
+
+#: Height of the shared player bar. One value is used by the bar itself and by
+#: the empty slots that reserve its space in the library / search screens.
+PLAYER_HEIGHT = dp(175)
 
 #: The background of the app.
 BG = hex_("#1c1f26")

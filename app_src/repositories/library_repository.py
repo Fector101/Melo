@@ -16,6 +16,11 @@ class LibraryRepository:
     ``scan`` queries MediaStore, so it blocks and has to run on a worker
     thread. Off Android it returns an empty list.
     """
+    def __init__(self):
+        # The library screen scans; the search screen reuses the result instead
+        # of paying for another MediaStore query.
+        self.cached_tracks = []
+        self.scan_in_progress = False
 
     def scan(self):
         """Every audio track of the device, sorted by title."""
@@ -27,35 +32,40 @@ class LibraryRepository:
             logger.error("scan: no activity context")
             return []
 
-        resolver = context.getContentResolver()
-        uri = autoclass(
-            "android.provider.MediaStore$Audio$Media").EXTERNAL_CONTENT_URI
-        projection = ["_id", "title", "artist", "duration", "_data"]
-        cursor = resolver.query(uri, projection, None, None, None)
-        tracks = []
+        self.scan_in_progress = True
+        try:
+            resolver = context.getContentResolver()
+            uri = autoclass("android.provider.MediaStore$Audio$Media").EXTERNAL_CONTENT_URI
+            projection = ["_id", "title", "artist", "duration", "_data"]
+            cursor = resolver.query(uri, projection, None, None, None)
+            tracks = []
 
-        if cursor:
-            title_idx = cursor.getColumnIndex("title")
-            artist_idx = cursor.getColumnIndex("artist")
-            duration_idx = cursor.getColumnIndex("duration")
-            data_idx = cursor.getColumnIndex("_data")
-            while cursor.moveToNext():
-                try:
-                    path = cursor.getString(data_idx)
-                except Exception as error:
-                    logger.warning("scan: could not get path for track, skipping. Error: %s", error)
-                    continue
-                tracks.append(Track(
-                    path=path,
-                    title=cursor.getString(title_idx) or "(unknown title)",
-                    artist=cursor.getString(artist_idx) or "",
-                    duration_ms=cursor.getLong(duration_idx) or 0,
-                ))
-            cursor.close()
+            if cursor:
+                title_idx = cursor.getColumnIndex("title")
+                artist_idx = cursor.getColumnIndex("artist")
+                duration_idx = cursor.getColumnIndex("duration")
+                data_idx = cursor.getColumnIndex("_data")
+                while cursor.moveToNext():
+                    try:
+                        path = cursor.getString(data_idx)
+                    except Exception as error:
+                        logger.warning("scan: could not get path for track, skipping. Error: %s", error)
+                        continue
+                    tracks.append(Track(
+                        path=path,
+                        title=cursor.getString(title_idx) or "(unknown title)",
+                        artist=cursor.getString(artist_idx) or "",
+                        duration_ms=cursor.getLong(duration_idx) or 0,
+                    ))
+                cursor.close()
 
-        tracks.sort(key=lambda track: track.display_title.lower())
-        logger.info("scan complete: %d track(s)", len(tracks))
-        return tracks
+            tracks.sort(key=lambda track: track.display_title.lower())
+            logger.info("scan complete: %d track(s)", len(tracks))
+            self.cached_tracks = tracks
+            return tracks
+        finally:
+            # A failed query must not leave the search screen polling forever.
+            self.scan_in_progress = False
 
     # def desktop_scan(self):
     #     """Scan for audio files in the user's music directory.
@@ -79,4 +89,5 @@ class LibraryRepository:
 
     #     tracks.sort(key=lambda track: track.display_title.lower())
     #     logger.info("desktop_scan complete: %d track(s)", len(tracks))
+    #     self.cached_tracks = tracks
     #     return tracks
