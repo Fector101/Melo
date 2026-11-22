@@ -18,8 +18,6 @@ import logging
 
 from android_notify.config import on_android_platform
 from android_notify.media import MediaNotification
-from core.android_bridge import run_on_ui_thread
-
 logger = logging.getLogger("melo.playback")
 
 try:
@@ -117,23 +115,20 @@ class KivySoundController:
         logger.debug("sound stopped: user_stopped=%s, has_cb=%s", self._user_stopped, self._on_track_end is not None)
         if self._user_stopped:
             return
-        cb = self._on_track_end
-        if cb is None:
-            return
+        
         try:
             length = self.get_length()
             pos = self.get_pos()
             logger.debug("end check: length=%.2f pos=%.2f diff=%.3f", length, pos, (length - pos) if length > 0 else -1)
             if length > 1.0 and pos >= length - 0.25:
                 logger.info("native completion detected -> advancing")
-                if not run_on_ui_thread(cb):
-                    try:
-                        cb()
-                    except Exception as error:
-                        logger.debug("end cb failed: %s", error)
+                try:
+                    self._on_track_end()
+                except Exception as error:
+                    logger.debug("end cb failed: %s", error)
         except Exception as error:
             logger.debug("sound stopped end check failed: %s", error)
-
+        
     def stop_playback(self):
         self._user_stopped = True
         if self._sound is not None:

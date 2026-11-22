@@ -75,24 +75,3 @@ def get_media_metadata_retriever():
     return _retriever_class
 
 
-def run_on_ui_thread(callback):
-    """Post ``callback`` to the Android UI thread.
-
-    Returns ``True`` when the callback was handed over to Android, and
-    ``False`` when the caller has to run it itself (desktop, no activity, or
-    a failure while posting).
-    """
-    if AndroidUiRunnable is None:
-        return False
-
-    try:
-        from android_notify.config import get_python_activity_context
-
-        activity = get_python_activity_context()
-        if activity is None:
-            return False
-        activity.runOnUiThread(AndroidUiRunnable(callback))
-        return True
-    except Exception as error:
-        logger.debug("could not post to the Android UI thread: %s", error)
-        return False
