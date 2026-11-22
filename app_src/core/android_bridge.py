@@ -6,7 +6,6 @@ importable on the desktop (and in the test suite).
 """
 
 import logging
-import traceback
 
 from android_notify.config import on_android_platform
 
@@ -24,29 +23,6 @@ if on_android_platform():
         autoclass = None
         PythonJavaClass = None
         java_method = None
-
-
-if on_android_platform() and PythonJavaClass is not None:
-
-    class AndroidUiRunnable(PythonJavaClass):
-        """Runs a Python callable on the Android UI thread."""
-
-        __javainterfaces__ = ["java/lang/Runnable"]
-        __javacontext__ = "app"
-
-        def __init__(self, fn):
-            super().__init__()
-            self.fn = fn
-
-        @java_method("()V")
-        def run(self):
-            try:
-                self.fn()
-            except Exception:
-                traceback.print_exc()
-
-else:
-    AndroidUiRunnable = None
 
 
 _retriever_class = None
