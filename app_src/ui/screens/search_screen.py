@@ -35,6 +35,8 @@ class SearchScreen(Screen):
 
     has_results = BooleanProperty(False)
 
+    search_status_text = StringProperty("scan ongoing...") # "No songs match your search" or "scan ongoing..."
+
     def __init__(self, search_view_model, player_view_model, **kwargs):
         """
         :param search_view_model: the :class:`SearchViewModel` with the tracks.
@@ -51,7 +53,7 @@ class SearchScreen(Screen):
             inset_top=self._on_insets, inset_bottom=self._on_insets
         )
         self.player.bind(current_track=self._on_current_track)
-        self.search_view_model.bind(filtered_tracks_value=self.display_found_tracks)
+        self.search_view_model.bind(filtered_tracks_value=self.display_found_tracks, search_status_text=self._on_search_status_text)
         # The manager fills filtered_tracks_value before this screen binds, so
         # seed the rows once here instead of waiting for the first keystroke.
         self.display_found_tracks(self.search_view_model,
@@ -162,5 +164,7 @@ class SearchScreen(Screen):
     def _on_insets(self, *_):
         self.apply_padding(self.inset_top, self.inset_bottom)
 
+    def _on_search_status_text(self, _, value):
+        self.search_status_text = value
 
 load_kv("search_screen.kv")

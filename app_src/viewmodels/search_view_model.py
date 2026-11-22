@@ -16,18 +16,29 @@ class SearchViewModel(EventDispatcher):
 
     # this is the delay to perform search after user is done typing to avoid lags
     delay_before_search = NumericProperty(0.2)
+    search_status_text = StringProperty("scan ongoing...")
 
     def __init__(self, library_repository, artwork_repository, player_repo,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.polling_clock_for_scan_tracks = None
         self.past_search_query_clock = None
         self._library_repository = library_repository
         self._artwork_repository = artwork_repository
         self.player_repo = player_repo
 
-        self._init_tracks_after_initialization(
-            self._library_repository.cached_tracks)
+        self.get_cached_tracks()
         self.bind(user_input=self.run_search_buffer)
+
+    def get_cached_tracks(self,dt=None):
+        # libray screen does the scan to populate LibraryRepository.cached_tracks value,
+        # instead of cancelling and doing more scan work here i'll just wait for it
+        if self.polling_clock_for_scan_tracks:
+            self.polling_clock_for_scan_tracks.cancel()
+        if not self._library_repository.scan_in_progress:
+            self._init_tracks_after_initialization(self._library_repository.cached_tracks)
+        else:
+            self.polling_clock_for_scan_tracks = Clock.schedule_interval(self.get_cached_tracks,1)
 
     def run_search_buffer(self, _, value):
         """Debounce a search so a fast typist only pays for the final query."""
@@ -40,6 +51,7 @@ class SearchViewModel(EventDispatcher):
     def _init_tracks_after_initialization(self, tracks):
         self.tracks = tracks
         self.filtered_tracks_value = tracks
+        self.set_search_status_text("john cena")
 
     def filter_tracks(self, user_input):
         """Filtering based on input against title, album and artist."""
@@ -56,6 +68,8 @@ class SearchViewModel(EventDispatcher):
                     or needle in track.album.casefold()):
                 filtered.append(track)
         self.filtered_tracks_value = filtered
+        if not self.filtered_tracks_value:
+            self.set_search_status_text("No songs match your search")
 
     def cached_artwork(self, path):
         """The cover art of ``path`` when it is already known (no I/O)."""
@@ -68,3 +82,7 @@ class SearchViewModel(EventDispatcher):
             if track.path == path:
                 return track
         return None
+
+    @mainthread
+    def set_search_status_text(self, value):
+        self.search_status_text = value

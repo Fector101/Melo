@@ -17,6 +17,7 @@ class LibraryRepository:
     thread. Off Android it returns an empty list.
     """
     cached_tracks = [] # when entering search screen from library screen, waiting to scan again is not the right move, it takes time
+    scan_in_progress = False
 
 
     def scan(self):
@@ -29,6 +30,7 @@ class LibraryRepository:
             logger.error("scan: no activity context")
             return []
 
+        self.scan_in_progress = True
         resolver = context.getContentResolver()
         uri = autoclass("android.provider.MediaStore$Audio$Media").EXTERNAL_CONTENT_URI
         projection = ["_id", "title", "artist", "duration", "_data"]
@@ -57,6 +59,7 @@ class LibraryRepository:
         tracks.sort(key=lambda track: track.display_title.lower())
         logger.info("scan complete: %d track(s)", len(tracks))
         self.cached_tracks = tracks
+        self.scan_in_progress = False
         return tracks
 
     # def desktop_scan(self):

@@ -1,7 +1,7 @@
 """Holds data the player uses to songs"""
-from kivy.properties import ListProperty, ObjectProperty
 
-
+# This class is new and was created to combat current playlist issue, but in the future more of PlayerViewModel data will be routed from here
+# current_playlist can be changed from any screen then player vm just only reads in repo class
 class PlayerRepository:
 
     # this value will get routed to player viewmodel :(
