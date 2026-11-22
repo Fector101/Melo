@@ -7,7 +7,6 @@ from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.screenmanager import Screen
 
-from core.insets import attach_insets
 from ui import load_kv, widgets  # noqa: F401  (registers SongRow, Icon, ...)
 from ui.format import format_duration
 
@@ -55,13 +54,8 @@ class SearchScreen(Screen):
         )
         self.player.bind(current_track=self._on_current_track)
         self.search_view_model.bind(filtered_tracks_value=self.display_found_tracks, search_status_text=self._on_search_status_text)
-        # The manager fills filtered_tracks_value before this screen binds, so
-        # seed the rows once here instead of waiting for the first keystroke.
-        self.display_found_tracks(self.search_view_model,
-                                  self.search_view_model.filtered_tracks_value)
-        # The manager's inset forwarding is a no-op on this device, so this
-        # screen owns its window insets directly (see core.insets).
-        attach_insets(self)
+        self.display_found_tracks(self.search_view_model, self.search_view_model.filtered_tracks_value)
+        
 
     def display_found_tracks(self, instance, tracks):
         """Solely for displaying found tracks after a search"""

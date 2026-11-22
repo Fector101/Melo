@@ -137,6 +137,9 @@ class MeloScreenManager(ScreenManager):
         # so repositories (self.library_repository, self.artwork_repository) already exists
         # and can be shared with the search screen viewmodel.
 
+        from kivy.core.window import Window
+        Window.softinput_mode = 'below_target'
+        
         from ui.screens.search_screen import SearchScreen
         from viewmodels.search_view_model import SearchViewModel
 

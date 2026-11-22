@@ -37,10 +37,7 @@ from ui.widgets.player_host import PlayerHost
 android_notify_logger.setLevel(logging.WARNING)
 logger = logging.getLogger("melo")
 
-if not logging.getLogger().handlers:
-    logging.basicConfig(level=logging.WARNING, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
-Window.softinput_mode = 'below_target'
 if platform not in ("android", "ios"):
     Window.size = (390, 740)
 
