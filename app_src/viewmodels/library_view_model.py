@@ -68,7 +68,10 @@ class LibraryViewModel(EventDispatcher):
             return
 
         self.status_text = "Requesting audio access..."
-        MeloPermissions.request_audio_access(self._on_permission)
+        if not MeloPermissions.has_audio_access():
+            MeloPermissions.request_audio_access(self._on_permission)
+        else:
+            self._on_permission(True)
 
     @mainthread
     def set_status(self, text):
