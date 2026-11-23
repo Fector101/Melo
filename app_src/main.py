@@ -89,8 +89,9 @@ class MeloApp(App):
         def __ask_for_audio_permission_and_scan(*args):
             if not MeloPermissions.has_audio_access():
                 library_view_model.set_status("Requesting audio access...")
-            MeloPermissions.request_audio_access(
-                callback=lambda *_: library_view_model.scan())
+                MeloPermissions.request_audio_access(callback=lambda *_: library_view_model.scan())
+            else:
+                library_view_model.scan()
 
         if not MeloPermissions.has_notification_access():
             library_view_model.set_status("Requesting Notification Access...")

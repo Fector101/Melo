@@ -37,11 +37,26 @@ def _media_notification():
     return _MediaNotification
 
 
-try:
-    from kivy.core.audio_output import SoundLoader as KivySoundLoader
-except ModuleNotFoundError:  # pragma: no cover - older Kivy
-    from kivy.core.audio import SoundLoader as KivySoundLoader
+_KivySoundLoader = None
 
+
+def _sound_loader():
+    """The Kivy sound loader, imported only when a track is played.
+
+    Importing ``kivy.core.audio_output`` registers Kivy's audio providers;
+    on Android that imports ``audio_android``, which autoclasses MediaPlayer,
+    AudioManager and friends and defines a JNI proxy at module level. Nothing
+    needs a sound loader while the library screen is being built, so keep that
+    cost off the first-frame path (same pattern as ``_media_notification``).
+    """
+    global _KivySoundLoader
+    if _KivySoundLoader is None:
+        try:
+            from kivy.core.audio_output import SoundLoader
+        except ModuleNotFoundError:  # pragma: no cover - older Kivy
+            from kivy.core.audio import SoundLoader
+        _KivySoundLoader = SoundLoader
+    return _KivySoundLoader
 
 
 def _load_kivy_sound(path):
@@ -58,9 +73,10 @@ def _load_kivy_sound(path):
     order on its own if the provider is unavailable or fails to load the
     file, and desktop just uses the default.
     """
+    loader = _sound_loader()
     if on_android_platform():
-        return KivySoundLoader.load(path, audio_output_provider="android")
-    return KivySoundLoader.load(path)
+        return loader.load(path, audio_output_provider="android")
+    return loader.load(path)
 
 
 def _keep_cpu_awake(sound):
