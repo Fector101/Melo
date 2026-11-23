@@ -24,8 +24,8 @@ ScreenFactories = dict[str, ScreenFactory]
 class MeloScreenManager(ScreenManager):
     """A ``ScreenManager`` that builds its screens (and their view models)."""
 
-    inset_top = NumericProperty(0)
-    inset_bottom = NumericProperty(0)
+    inset_top = NumericProperty(68.1) # ".1" so when android returns whole value (screen listeners and player bar) notice a change in listeners
+    inset_bottom = NumericProperty(94.1)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -44,8 +44,11 @@ class MeloScreenManager(ScreenManager):
             "update": self.__create_update_screen,
             "search": self.__create_search_screen
         }
-        attach_insets(self) # Pad the UI clear of the status bar / nav buttons (Android 15+).
         self.bind(inset_top=self._apply_insets_to_screens, inset_bottom=self._apply_insets_to_screens)
+    
+    def setup_android_screens_inset(self, dt):
+        # creating this public method so app can defer `attach_insets` which calls java classes
+        attach_insets(self) # Pad the UI clear of the status bar / nav buttons (Android 15+).
 
     def register_screen(self, name: str, factory: ScreenFactory):
         """Add or replace the factory of the screen called ``name``."""

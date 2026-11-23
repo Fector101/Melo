@@ -61,7 +61,7 @@ if on_android_platform() and PythonJavaClass is not None:
 
 
 
-def read_insets(insets):
+def read_insets(insets=None):
     """WindowInsets -> status/nav/cutout insets in **physical pixels**.
 
     Kivy lays out in pixels on Android, so the raw values slot straight into
@@ -69,7 +69,7 @@ def read_insets(insets):
     stable while a bar is temporarily hidden (immersive swipe, keyboard).
     The app is portrait-only, so only the vertical insets can be non-zero.
     """
-    if autoclass("android.os.Build$VERSION").SDK_INT < 35:
+    if not insets or autoclass("android.os.Build$VERSION").SDK_INT < 35:
         return {"top": 0, "bottom": 0}
 
     inset_type = autoclass("android.view.WindowInsets$Type")
@@ -127,6 +127,7 @@ def attach_insets(root):
     global _insets_listener, _insets_register
 
     if not on_android_platform() or autoclass("android.os.Build$VERSION").SDK_INT < 35:
+        _apply_insets(root, read_insets(None)) # reseting placeholder values (68.1,94.1) not needed in android <15 envs
         return
     try:
         activity = get_python_activity_context()

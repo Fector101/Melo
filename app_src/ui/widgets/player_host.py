@@ -21,7 +21,7 @@ class PlayerHost(FloatLayout):
     """Owns the one player bar and keeps it in sync with the player view model."""
 
     player = ObjectProperty(None)
-    inset_bottom = NumericProperty(0)
+    inset_bottom = NumericProperty(94.1)
     visible = BooleanProperty(True)
 
     def __init__(self, player_view_model, manager=None, **kwargs):

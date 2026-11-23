@@ -75,6 +75,7 @@ class MeloApp(App):
         # Bouncing the Clock so it doesn't interfere with UI generation,
         # I've tested this pattern on different Android versions and it works properly.
         self.on_intent()
+        Clock.schedule_once(self.screen_manager.setup_android_screens_inset, 0.3)
         Clock.schedule_once(self._start, 0.7)
         Clock.schedule_once(self._check_updates_later, 3)
 
