@@ -12,8 +12,7 @@ screen may only be built after that check has found a newer release.
 from typing import Callable
 
 from kivy.properties import NumericProperty
-from kivy.uix.screenmanager import Screen, ScreenManager
-
+from kivy.uix.screenmanager import Screen, ScreenManager, SlideTransition, NoTransition
 
 # A screen name and a function that takes no arguments and returns a Screen.
 ScreenFactory = Callable[[], Screen]
@@ -57,6 +56,7 @@ class MeloScreenManager(ScreenManager):
     def on_current(self, instance, value):
         # Create the screen before ``super().on_current`` asks for it.
         self.ensure_screen(value)
+        self.__set_animation(value)
         super().on_current(instance, value)
 
     def ensure_screen(self, name: str):
@@ -70,9 +70,6 @@ class MeloScreenManager(ScreenManager):
         self.add_widget(screen)
         self._apply_insets_to_screens()
 
-    # ------------------------------------------------------------------ #
-    # The update                                                          #
-    # ------------------------------------------------------------------ #
     def check_for_update(self):
         """Build the update view model; call this from a worker thread.
 
@@ -153,12 +150,17 @@ class MeloScreenManager(ScreenManager):
         )
         return SearchScreen(self.search_view_model, self.player_view_model)
 
-    # ------------------------------------------------------------------ #
-    # Insets                                                              #
-    # ------------------------------------------------------------------ #
     def _apply_insets_to_screens(self, *_):
         """Give every screen that pads itself the current window insets."""
         for screen in self.screens:
             apply_padding = getattr(screen, "apply_padding", None)
             if apply_padding is not None:
                 apply_padding(self.inset_top, self.inset_bottom)
+
+    def __set_animation(self, value):
+        if value == "search":
+            self.transition = SlideTransition(direction="left")
+        elif value == "library":
+            self.transition = SlideTransition(direction="right")
+        else:
+            self.transition = NoTransition()
