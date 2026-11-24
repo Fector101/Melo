@@ -17,18 +17,22 @@ import os
 import logging
 import threading
 
+# 3.003159523010254
 from kivy.app import App
 from kivy.core.window import Window
 from kivy.clock import Clock, mainthread
 from kivy.uix.floatlayout import FloatLayout
 from kivy.utils import platform
 
+# 0.07610249519348145
 from android_notify import logger as android_notify_logger
 
+# 0.006603717803955078
 from utils.permissions import MeloPermissions
 from repositories.intent_repository import IntentRepository
 from repositories.update_notification_repository import bind_update_intents, schedule_background_check
 
+# 0.20838284492492676
 from ui import load_kv_files
 from ui.screens.manager import MeloScreenManager
 from ui.widgets.player_host import PlayerHost

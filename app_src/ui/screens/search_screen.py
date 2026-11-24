@@ -48,6 +48,7 @@ class SearchScreen(Screen):
         self._displayed_tracks_recycle_view_data = []
         self._focus_event = None
 
+    def _entrance_work(self, dt):
         self.bind(
             query=lambda _, value: setattr(self.search_view_model,"user_input",value),
             inset_top=self._on_insets, inset_bottom=self._on_insets
@@ -55,7 +56,6 @@ class SearchScreen(Screen):
         self.player.bind(current_track=self._on_current_track)
         self.search_view_model.bind(filtered_tracks_value=self.display_found_tracks, search_status_text=self._on_search_status_text)
         self.display_found_tracks(self.search_view_model, self.search_view_model.filtered_tracks_value)
-        
 
     def display_found_tracks(self, instance, tracks):
         """Solely for displaying found tracks after a search"""
@@ -126,6 +126,7 @@ class SearchScreen(Screen):
     # Android back / desktop Escape                                       #
     # ------------------------------------------------------------------ #
     def on_enter(self,*args):
+        Clock.schedule_once(self._entrance_work,0.1)
         Window.bind(on_keyboard=self._on_window_key)
         self._focus_event = Clock.schedule_once(self._focus_search, 0.15)
 
