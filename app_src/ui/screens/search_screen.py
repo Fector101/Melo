@@ -47,8 +47,13 @@ class SearchScreen(Screen):
 
         self._displayed_tracks_recycle_view_data = []
         self._focus_event = None
+        self.__done_entrance_work = False
 
     def _entrance_work(self, dt):
+        if self.__done_entrance_work:
+            return
+
+        self.__done_entrance_work = True
         self.bind(
             query=lambda _, value: setattr(self.search_view_model,"user_input",value),
             inset_top=self._on_insets, inset_bottom=self._on_insets
