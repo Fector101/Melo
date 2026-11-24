@@ -51,7 +51,10 @@ def screen(library, artwork, playback, immediate_clock):
         artwork_repository=artwork,
     )
     search_vm = SearchViewModel(library, artwork, player_repo)
-    return SearchScreen(search_vm, player_vm), library_vm, player_vm
+    view = SearchScreen(search_vm, player_vm, library=library_vm)
+    # The real screen does this on enter; drive it here so the rows exist.
+    view._entrance_work(0)
+    return view, library_vm, player_vm
 
 
 # --------------------------------------------------------------------------- #
@@ -171,6 +174,16 @@ def test_cached_artwork_is_used_for_the_rows(screen, artwork):
     assert view.ids.results.data[0]["art"] == ""
 
 
+def test_late_artwork_patches_the_matching_result_row(screen):
+    view, library_vm, _ = screen
+
+    library_vm.dispatch("on_artwork_ready", path="/music/1.mp3",
+                        art="/cache/1.jpg")
+
+    assert view.ids.results.data[1]["art"] == "/cache/1.jpg"
+    assert view.ids.results.data[0]["art"] == ""
+
+
 # --------------------------------------------------------------------------- #
 # Navigation                                                                   #
 # --------------------------------------------------------------------------- #
@@ -193,6 +206,7 @@ def test_the_manager_factory_wires_the_search_view_model(screen):
     fake_manager.library_repository = library_vm._library
     fake_manager.artwork_repository = library_vm._artwork
     fake_manager.player_repo = library_vm.player_repo
+    fake_manager.library_view_model = library_vm
     fake_manager.player_view_model = player_vm
 
     built = MeloScreenManager._MeloScreenManager__create_search_screen(
@@ -201,6 +215,7 @@ def test_the_manager_factory_wires_the_search_view_model(screen):
     assert isinstance(built.search_view_model, SearchViewModel)
     assert built.search_view_model.tracks == library_vm.tracks
     assert built.player is player_vm
+    assert built.library is library_vm
 
 
 # --------------------------------------------------------------------------- #

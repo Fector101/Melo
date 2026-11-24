@@ -36,14 +36,17 @@ class SearchScreen(Screen):
 
     search_status_text = StringProperty("scan ongoing...") # "No songs match your search" or "scan ongoing..."
 
-    def __init__(self, search_view_model, player_view_model, **kwargs):
+    def __init__(self, search_view_model, player_view_model, library,
+                 **kwargs):
         """
         :param search_view_model: the :class:`SearchViewModel` with the tracks.
         :param player_view_model: the :class:`PlayerViewModel` used to play a result.
+        :param library: the :class:`LibraryViewModel` that reports late covers.
         """
         super().__init__(**kwargs)
         self.search_view_model = search_view_model
         self.player = player_view_model
+        self.library = library
 
         self._displayed_tracks_recycle_view_data = []
         self._focus_event = None
@@ -60,6 +63,9 @@ class SearchScreen(Screen):
         )
         self.player.bind(current_track=self._on_current_track)
         self.search_view_model.bind(filtered_tracks_value=self.display_found_tracks, search_status_text=self._on_search_status_text)
+        # Rows are seeded from the art cache below; this fills in covers that
+        # the library worker extracts after the rows were created.
+        self.library.bind(on_artwork_ready=self._on_artwork_ready)
         self.display_found_tracks(self.search_view_model, self.search_view_model.filtered_tracks_value)
 
     def display_found_tracks(self, instance, tracks):
@@ -98,6 +104,27 @@ class SearchScreen(Screen):
                 changed = True
         if changed:
             self.ids.results.refresh_from_data()
+
+    def _on_artwork_ready(self, _instance, path, art):
+        """Patch a cover that arrived after the result rows were created."""
+        for row in self._displayed_tracks_recycle_view_data:
+            if row["path"] == path:
+                row["art"] = art
+                break
+        else:
+            return
+
+        rv = self.ids.results
+        try:
+            adapter = getattr(rv, "view_adapter", None)
+            if adapter is not None and hasattr(adapter, "get_visible_view"):
+                for view in adapter.get_visible_view():
+                    if getattr(view, "path", None) == path:
+                        view.art = art
+                        return
+        except Exception:
+            pass
+        rv.refresh_from_data()
 
     def _on_row_selected(self, path):
         """A result was tapped: play it with the current results as playlist."""

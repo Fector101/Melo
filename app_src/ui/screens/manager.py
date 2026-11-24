@@ -148,7 +148,8 @@ class MeloScreenManager(ScreenManager):
             artwork_repository=self.artwork_repository,
             player_repo=self.player_repo,
         )
-        return SearchScreen(self.search_view_model, self.player_view_model)
+        return SearchScreen(self.search_view_model, self.player_view_model,
+                            library=self.library_view_model)
 
     def _apply_insets_to_screens(self, *_):
         """Give every screen that pads itself the current window insets."""
