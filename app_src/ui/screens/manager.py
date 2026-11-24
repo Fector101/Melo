@@ -14,7 +14,6 @@ from typing import Callable
 from kivy.properties import NumericProperty
 from kivy.uix.screenmanager import Screen, ScreenManager
 
-from core.insets import attach_insets
 
 # A screen name and a function that takes no arguments and returns a Screen.
 ScreenFactory = Callable[[], Screen]
@@ -48,6 +47,7 @@ class MeloScreenManager(ScreenManager):
     
     def setup_android_screens_inset(self, dt):
         # creating this public method so app can defer `attach_insets` which calls java classes
+        from core.insets import attach_insets
         attach_insets(self) # Pad the UI clear of the status bar / nav buttons (Android 15+).
 
     def register_screen(self, name: str, factory: ScreenFactory):
