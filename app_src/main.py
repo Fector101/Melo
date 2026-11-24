@@ -18,8 +18,8 @@ import logging
 import threading
 
 from kivy.app import App
-from kivy.clock import Clock, mainthread
 from kivy.core.window import Window
+from kivy.clock import Clock, mainthread
 from kivy.uix.floatlayout import FloatLayout
 from kivy.utils import platform
 
