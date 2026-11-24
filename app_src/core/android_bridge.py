@@ -12,17 +12,9 @@ from android_notify.config import on_android_platform
 logger = logging.getLogger("melo.android")
 
 autoclass = None
-PythonJavaClass = None
-java_method = None
 
 if on_android_platform():
-    try:
-        from jnius import autoclass, PythonJavaClass, java_method
-    except Exception as error:  # pragma: no cover - Android only
-        logger.warning("jnius is unavailable: %s", error)
-        autoclass = None
-        PythonJavaClass = None
-        java_method = None
+    from jnius import autoclass
 
 
 _retriever_class = None

@@ -14,7 +14,14 @@ import logging
 
 from kivy.clock import Clock
 from android_notify.config import get_python_activity_context, on_android_platform
-from core.android_bridge import PythonJavaClass, autoclass, java_method
+
+
+PythonJavaClass = None
+java_method = None
+autoclass= None
+
+if on_android_platform():
+    from jnius import autoclass, PythonJavaClass, java_method
 
 logger = logging.getLogger("melo.insets")
 
