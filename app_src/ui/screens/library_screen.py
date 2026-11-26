@@ -1,6 +1,7 @@
 """The library screen: the list of tracks, the player and the scan button."""
 
 from kivy.properties import BooleanProperty, NumericProperty, StringProperty
+from kivy.clock import Clock
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.screenmanager import Screen
@@ -42,10 +43,16 @@ class LibraryScreen(Screen):
         self.player = player
         self._rows = []
         self._update_chip = None
+        self.__done_entrance_work = False
+        # Clock.schedule_once(self._entrance_work,0.1) hot reload
+        
+    def _entrance_work(self, dt):
+        if self.__done_entrance_work:
+            return
+        self.__done_entrance_work = True
+
         self._bind_view_models()
         self._bind_widgets()
-
-    # ------------------------------------------------------------------ #
     # Wiring                                                              #
     # ------------------------------------------------------------------ #
     def _bind_view_models(self):
@@ -179,5 +186,8 @@ class LibraryScreen(Screen):
         self.inset_bottom = inset_bottom
         self.ids.main_container.padding = [0, inset_top, 0, inset_bottom]
 
+    def on_enter(self,*args):
+        print("_entrance_work_entrance_work_entrance_work_entrance_work_entrance_work")
+        Clock.schedule_once(self._entrance_work,0.1)
 
 load_kv("library_screen.kv")
