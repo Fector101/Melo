@@ -44,9 +44,10 @@ class LibraryScreen(Screen):
         self._rows = []
         self._update_chip = None
         self.__done_entrance_work = False
+        self._entrance_work() # libaray screen load up is sync
         # Clock.schedule_once(self._entrance_work,0.1) hot reload
         
-    def _entrance_work(self, dt):
+    def _entrance_work(self, dt=None):
         if self.__done_entrance_work:
             return
         self.__done_entrance_work = True
@@ -186,8 +187,5 @@ class LibraryScreen(Screen):
         self.inset_bottom = inset_bottom
         self.ids.main_container.padding = [0, inset_top, 0, inset_bottom]
 
-    def on_enter(self,*args):
-        print("_entrance_work_entrance_work_entrance_work_entrance_work_entrance_work")
-        Clock.schedule_once(self._entrance_work,0.1)
 
 load_kv("library_screen.kv")
