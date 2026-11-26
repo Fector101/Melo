@@ -7,7 +7,6 @@ from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.screenmanager import Screen
 
-from core.insets import attach_insets
 from ui import load_kv, widgets  # noqa: F401  (registers SongRow, Icon, ...)
 from ui.format import format_duration
 
@@ -37,31 +36,37 @@ class SearchScreen(Screen):
 
     search_status_text = StringProperty("scan ongoing...") # "No songs match your search" or "scan ongoing..."
 
-    def __init__(self, search_view_model, player_view_model, **kwargs):
+    def __init__(self, search_view_model, player_view_model, library,
+                 **kwargs):
         """
         :param search_view_model: the :class:`SearchViewModel` with the tracks.
         :param player_view_model: the :class:`PlayerViewModel` used to play a result.
+        :param library: the :class:`LibraryViewModel` that reports late covers.
         """
         super().__init__(**kwargs)
         self.search_view_model = search_view_model
         self.player = player_view_model
+        self.library = library
 
         self._displayed_tracks_recycle_view_data = []
         self._focus_event = None
+        self.__done_entrance_work = False
 
+    def _entrance_work(self, dt):
+        if self.__done_entrance_work:
+            return
+
+        self.__done_entrance_work = True
         self.bind(
             query=lambda _, value: setattr(self.search_view_model,"user_input",value),
             inset_top=self._on_insets, inset_bottom=self._on_insets
         )
         self.player.bind(current_track=self._on_current_track)
         self.search_view_model.bind(filtered_tracks_value=self.display_found_tracks, search_status_text=self._on_search_status_text)
-        # The manager fills filtered_tracks_value before this screen binds, so
-        # seed the rows once here instead of waiting for the first keystroke.
-        self.display_found_tracks(self.search_view_model,
-                                  self.search_view_model.filtered_tracks_value)
-        # The manager's inset forwarding is a no-op on this device, so this
-        # screen owns its window insets directly (see core.insets).
-        attach_insets(self)
+        # Rows are seeded from the art cache below; this fills in covers that
+        # the library worker extracts after the rows were created.
+        self.library.bind(on_artwork_ready=self._on_artwork_ready)
+        self.display_found_tracks(self.search_view_model, self.search_view_model.filtered_tracks_value)
 
     def display_found_tracks(self, instance, tracks):
         """Solely for displaying found tracks after a search"""
@@ -100,6 +105,27 @@ class SearchScreen(Screen):
         if changed:
             self.ids.results.refresh_from_data()
 
+    def _on_artwork_ready(self, _instance, path, art):
+        """Patch a cover that arrived after the result rows were created."""
+        for row in self._displayed_tracks_recycle_view_data:
+            if row["path"] == path:
+                row["art"] = art
+                break
+        else:
+            return
+
+        rv = self.ids.results
+        try:
+            adapter = getattr(rv, "view_adapter", None)
+            if adapter is not None and hasattr(adapter, "get_visible_view"):
+                for view in adapter.get_visible_view():
+                    if getattr(view, "path", None) == path:
+                        view.art = art
+                        return
+        except Exception:
+            pass
+        rv.refresh_from_data()
+
     def _on_row_selected(self, path):
         """A result was tapped: play it with the current results as playlist."""
         self.search_view_model.set_playlist_from_results()
@@ -114,6 +140,16 @@ class SearchScreen(Screen):
         """The X button was tapped."""
         self.ids.search_input.text = ""
         self.query = ""
+
+    def set_query(self, query):
+        """Open with ``query`` already applied (from the library banner)."""
+        value = query or ""
+        self.ids.search_input.text = value
+        self.search_view_model.user_input = value
+        # Do not wait for the debounce: the results must be ready when the
+        # screen slides in, even on its first visit.
+        self.search_view_model.filter_tracks(value)
+        self.query = value
 
     def play_all(self, *_):
         """Play the first result with the current results as the playlist."""
@@ -132,6 +168,7 @@ class SearchScreen(Screen):
     # Android back / desktop Escape                                       #
     # ------------------------------------------------------------------ #
     def on_enter(self,*args):
+        Clock.schedule_once(self._entrance_work,0.1)
         Window.bind(on_keyboard=self._on_window_key)
         self._focus_event = Clock.schedule_once(self._focus_search, 0.15)
 

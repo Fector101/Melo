@@ -17,16 +17,46 @@ Why Kivy's own ``SoundLoader``:
 import logging
 
 from android_notify.config import on_android_platform
-from android_notify.media import MediaNotification
-from core.android_bridge import run_on_ui_thread
-
 logger = logging.getLogger("melo.playback")
 
-try:
-    from kivy.core.audio_output import SoundLoader as KivySoundLoader
-except ModuleNotFoundError:  # pragma: no cover - older Kivy
-    from kivy.core.audio import SoundLoader as KivySoundLoader
+_MediaNotification = None
 
+
+def _media_notification():
+    """The notification class, imported only when a track starts playing.
+
+    ``android_notify.media`` (version 1.62.0 below) loads a dozen Java classes and registers JNI
+    proxies when it is imported. Nothing needs a notification until the first
+    ``set_now_playing()``, so keep that cost off the startup path.
+    """
+    global _MediaNotification
+    if _MediaNotification is None:
+        from android_notify.media import MediaNotification
+
+        _MediaNotification = MediaNotification
+    return _MediaNotification
+
+
+_KivySoundLoader = None
+
+
+def _sound_loader():
+    """The Kivy sound loader, imported only when a track is played.
+
+    Importing ``kivy.core.audio_output`` registers Kivy's audio providers;
+    on Android that imports ``audio_android``, which autoclasses MediaPlayer,
+    AudioManager and friends and defines a JNI proxy at module level. Nothing
+    needs a sound loader while the library screen is being built, so keep that
+    cost off the first-frame path (same pattern as ``_media_notification``).
+    """
+    global _KivySoundLoader
+    if _KivySoundLoader is None:
+        try:
+            from kivy.core.audio_output import SoundLoader
+        except ModuleNotFoundError:  # pragma: no cover - older Kivy
+            from kivy.core.audio import SoundLoader
+        _KivySoundLoader = SoundLoader
+    return _KivySoundLoader
 
 
 def _load_kivy_sound(path):
@@ -43,9 +73,10 @@ def _load_kivy_sound(path):
     order on its own if the provider is unavailable or fails to load the
     file, and desktop just uses the default.
     """
+    loader = _sound_loader()
     if on_android_platform():
-        return KivySoundLoader.load(path, audio_output_provider="android")
-    return KivySoundLoader.load(path)
+        return loader.load(path, audio_output_provider="android")
+    return loader.load(path)
 
 
 def _keep_cpu_awake(sound):
@@ -117,23 +148,20 @@ class KivySoundController:
         logger.debug("sound stopped: user_stopped=%s, has_cb=%s", self._user_stopped, self._on_track_end is not None)
         if self._user_stopped:
             return
-        cb = self._on_track_end
-        if cb is None:
-            return
+        
         try:
             length = self.get_length()
             pos = self.get_pos()
             logger.debug("end check: length=%.2f pos=%.2f diff=%.3f", length, pos, (length - pos) if length > 0 else -1)
             if length > 1.0 and pos >= length - 0.25:
                 logger.info("native completion detected -> advancing")
-                if not run_on_ui_thread(cb):
-                    try:
-                        cb()
-                    except Exception as error:
-                        logger.debug("end cb failed: %s", error)
+                try:
+                    self._on_track_end()
+                except Exception as error:
+                    logger.debug("end cb failed: %s", error)
         except Exception as error:
             logger.debug("sound stopped end check failed: %s", error)
-
+        
     def stop_playback(self):
         self._user_stopped = True
         if self._sound is not None:
@@ -331,7 +359,7 @@ class PlaybackRepository:
         if self._controller is None:
             return
         
-        self._notification = MediaNotification(
+        self._notification = _media_notification()(
             mediaController=self._controller,
             on_next=self._on_next,
             on_previous=self._on_previous,

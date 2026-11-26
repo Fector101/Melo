@@ -68,7 +68,10 @@ class LibraryViewModel(EventDispatcher):
             return
 
         self.status_text = "Requesting audio access..."
-        MeloPermissions.request_audio_access(self._on_permission)
+        if not MeloPermissions.has_audio_access():
+            MeloPermissions.request_audio_access(self._on_permission)
+        else:
+            self._on_permission(True)
 
     @mainthread
     def set_status(self, text):
@@ -78,6 +81,8 @@ class LibraryViewModel(EventDispatcher):
     def track_by_path(self, path):
         """The track with ``path``, or ``None``."""
         self.player_repo.current_playlist = self.tracks
+        self.player_repo.playlist_query = ""  # playing from library screen playlist, not search queue playlist
+        self.player_repo.playback_source = "library"  # library playback, not search
         for track in self.tracks:
             if track.path == path:
                 return track

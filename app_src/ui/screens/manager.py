@@ -12,9 +12,7 @@ screen may only be built after that check has found a newer release.
 from typing import Callable
 
 from kivy.properties import NumericProperty
-from kivy.uix.screenmanager import Screen, ScreenManager
-
-from core.insets import attach_insets
+from kivy.uix.screenmanager import Screen, ScreenManager, SlideTransition, NoTransition
 
 # A screen name and a function that takes no arguments and returns a Screen.
 ScreenFactory = Callable[[], Screen]
@@ -24,8 +22,8 @@ ScreenFactories = dict[str, ScreenFactory]
 class MeloScreenManager(ScreenManager):
     """A ``ScreenManager`` that builds its screens (and their view models)."""
 
-    inset_top = NumericProperty(0)
-    inset_bottom = NumericProperty(0)
+    inset_top = NumericProperty(68.1) # ".1" so when android returns whole value (screen listeners and player bar) notice a change in listeners
+    inset_bottom = NumericProperty(94.1)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -44,8 +42,12 @@ class MeloScreenManager(ScreenManager):
             "update": self.__create_update_screen,
             "search": self.__create_search_screen
         }
-        attach_insets(self) # Pad the UI clear of the status bar / nav buttons (Android 15+).
         self.bind(inset_top=self._apply_insets_to_screens, inset_bottom=self._apply_insets_to_screens)
+    
+    def setup_android_screens_inset(self, dt):
+        # creating this public method so app can defer `attach_insets` which calls java classes
+        from core.insets import attach_insets
+        attach_insets(self) # Pad the UI clear of the status bar / nav buttons (Android 15+).
 
     def register_screen(self, name: str, factory: ScreenFactory):
         """Add or replace the factory of the screen called ``name``."""
@@ -54,6 +56,7 @@ class MeloScreenManager(ScreenManager):
     def on_current(self, instance, value):
         # Create the screen before ``super().on_current`` asks for it.
         self.ensure_screen(value)
+        self.__set_animation(value)
         super().on_current(instance, value)
 
     def ensure_screen(self, name: str):
@@ -67,9 +70,6 @@ class MeloScreenManager(ScreenManager):
         self.add_widget(screen)
         self._apply_insets_to_screens()
 
-    # ------------------------------------------------------------------ #
-    # The update                                                          #
-    # ------------------------------------------------------------------ #
     def check_for_update(self):
         """Build the update view model; call this from a worker thread.
 
@@ -137,6 +137,9 @@ class MeloScreenManager(ScreenManager):
         # so repositories (self.library_repository, self.artwork_repository) already exists
         # and can be shared with the search screen viewmodel.
 
+        from kivy.core.window import Window
+        Window.softinput_mode = 'below_target'
+        
         from ui.screens.search_screen import SearchScreen
         from viewmodels.search_view_model import SearchViewModel
 
@@ -145,14 +148,28 @@ class MeloScreenManager(ScreenManager):
             artwork_repository=self.artwork_repository,
             player_repo=self.player_repo,
         )
-        return SearchScreen(self.search_view_model, self.player_view_model)
+        return SearchScreen(self.search_view_model, self.player_view_model,
+                            library=self.library_view_model)
 
-    # ------------------------------------------------------------------ #
-    # Insets                                                              #
-    # ------------------------------------------------------------------ #
+    def open_search(self, query: str):
+        """Navigate to search screen with ``query`` already filled in and filtered."""
+        self.ensure_screen("search") # TODO remove before merge the action btn won't be visible is user never entered the search screen
+        screen = self.get_screen("search")
+        # TODO in next version set query after entering screen on_enter, i.e animation will be done and reduces chances on lag on a slower devices
+        screen.set_query(query)
+        self.current = "search"
+
     def _apply_insets_to_screens(self, *_):
         """Give every screen that pads itself the current window insets."""
         for screen in self.screens:
             apply_padding = getattr(screen, "apply_padding", None)
             if apply_padding is not None:
                 apply_padding(self.inset_top, self.inset_bottom)
+
+    def __set_animation(self, value):
+        if value == "search":
+            self.transition = SlideTransition(direction="left")
+        elif value == "library":
+            self.transition = SlideTransition(direction="right")
+        else:
+            self.transition = NoTransition()

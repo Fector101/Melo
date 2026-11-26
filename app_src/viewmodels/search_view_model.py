@@ -23,6 +23,8 @@ class SearchViewModel(EventDispatcher):
         super().__init__(*args, **kwargs)
         self.polling_clock_for_scan_tracks = None
         self.past_search_query_clock = None
+        # The trimmed query that produced ``filtered_tracks_value``.
+        self._stripped_query = ""
         self._library_repository = library_repository
         self._artwork_repository = artwork_repository
         self.player_repo = player_repo
@@ -55,8 +57,10 @@ class SearchViewModel(EventDispatcher):
 
     def filter_tracks(self, user_input):
         """Filtering based on input against title and artist."""
+        stripped_query = (user_input or "").strip()
+        self._stripped_query = stripped_query
         # `casefold` over lower so chars with alternative lowercases match properly
-        user_input = (user_input or "").strip().casefold()
+        user_input = stripped_query.casefold()
         if not user_input:
             self.filtered_tracks_value = self.tracks
             self.__set_search_status_text_state()
@@ -83,6 +87,8 @@ class SearchViewModel(EventDispatcher):
     def set_playlist_from_results(self):
         """Make the current results the playlist the player walks through."""
         self.player_repo.current_playlist = self.filtered_tracks_value
+        self.player_repo.playback_source = "search"
+        self.player_repo.playlist_query = self._stripped_query
 
     @mainthread
     def set_search_status_text(self, value):

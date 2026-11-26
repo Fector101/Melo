@@ -17,18 +17,22 @@ import os
 import logging
 import threading
 
+# 3.003159523010254
 from kivy.app import App
-from kivy.clock import Clock, mainthread
 from kivy.core.window import Window
+from kivy.clock import Clock, mainthread
 from kivy.uix.floatlayout import FloatLayout
 from kivy.utils import platform
 
+# 0.07610249519348145
 from android_notify import logger as android_notify_logger
 
+# 0.006603717803955078
 from utils.permissions import MeloPermissions
 from repositories.intent_repository import IntentRepository
 from repositories.update_notification_repository import bind_update_intents, schedule_background_check
 
+# 0.20838284492492676
 from ui import load_kv_files
 from ui.screens.manager import MeloScreenManager
 from ui.widgets.player_host import PlayerHost
@@ -40,7 +44,7 @@ logger = logging.getLogger("melo")
 if not logging.getLogger().handlers:
     logging.basicConfig(level=logging.WARNING, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
-Window.softinput_mode = 'below_target'
+
 if platform not in ("android", "ios"):
     Window.size = (390, 740)
 
@@ -75,6 +79,7 @@ class MeloApp(App):
         # Bouncing the Clock so it doesn't interfere with UI generation,
         # I've tested this pattern on different Android versions and it works properly.
         self.on_intent()
+        Clock.schedule_once(self.screen_manager.setup_android_screens_inset, 0.3)
         Clock.schedule_once(self._start, 0.7)
         Clock.schedule_once(self._check_updates_later, 3)
 
@@ -88,8 +93,9 @@ class MeloApp(App):
         def __ask_for_audio_permission_and_scan(*args):
             if not MeloPermissions.has_audio_access():
                 library_view_model.set_status("Requesting audio access...")
-            MeloPermissions.request_audio_access(
-                callback=lambda *_: library_view_model.scan())
+                MeloPermissions.request_audio_access(callback=lambda *_: library_view_model.scan())
+            else:
+                library_view_model.scan()
 
         if not MeloPermissions.has_notification_access():
             library_view_model.set_status("Requesting Notification Access...")
@@ -104,7 +110,7 @@ class MeloApp(App):
         bind_update_intents(self.handle_update_intent)
 
     def on_intent(self):
-        # NOT a real kivy on_intent method
+        # self.handle_update_intent fires on every new intent
         self.handle_update_intent(IntentRepository.read_update_intent())
 
     def handle_update_intent(self, payload):
