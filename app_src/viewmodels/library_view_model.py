@@ -81,7 +81,7 @@ class LibraryViewModel(EventDispatcher):
     def track_by_path(self, path):
         """The track with ``path``, or ``None``."""
         self.player_repo.current_playlist = self.tracks
-        # self.player_repo.playlist_query = ""  # library playback, not search
+        self.player_repo.playlist_query = ""  # playing from library screen playlist, not search queue playlist
         self.player_repo.playback_source = "library"  # library playback, not search
         for track in self.tracks:
             if track.path == path:
