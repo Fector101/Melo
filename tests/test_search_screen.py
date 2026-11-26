@@ -184,6 +184,40 @@ def test_late_artwork_patches_the_matching_result_row(screen):
     assert view.ids.results.data[0]["art"] == ""
 
 
+def test_playing_results_remembers_the_query(screen):
+    view, _, player_vm = screen
+
+    view.query = "Artist 2"
+    view.search_view_model.set_playlist_from_results()
+
+    assert player_vm._player_repo.playlist_query == "Artist 2"
+
+
+def test_set_query_applies_the_search_immediately(screen):
+    view, _, _ = screen
+
+    view.set_query("artist 2")
+
+    assert view.ids.search_input.text == "artist 2"
+    assert view.query == "artist 2"
+    assert [row["path"] for row in view.ids.results.data] == ["/music/2.mp3"]
+
+
+def test_manager_open_search_navigates_and_prefills(screen):
+    view, _, _ = screen
+    manager = MeloScreenManager()
+    manager.add_widget(Screen(name="library"))
+    view.name = "search"
+    manager.add_widget(view)
+    manager.current = "library"
+
+    manager.open_search("track 1")
+
+    assert manager.current == "search"
+    assert view.ids.search_input.text == "track 1"
+    assert [row["path"] for row in view.ids.results.data] == ["/music/1.mp3"]
+
+
 # --------------------------------------------------------------------------- #
 # Navigation                                                                   #
 # --------------------------------------------------------------------------- #

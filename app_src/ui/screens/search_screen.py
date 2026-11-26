@@ -141,6 +141,16 @@ class SearchScreen(Screen):
         self.ids.search_input.text = ""
         self.query = ""
 
+    def set_query(self, query):
+        """Open with ``query`` already applied (from the library banner)."""
+        value = query or ""
+        self.ids.search_input.text = value
+        self.search_view_model.user_input = value
+        # Do not wait for the debounce: the results must be ready when the
+        # screen slides in, even on its first visit.
+        self.search_view_model.filter_tracks(value)
+        self.query = value
+
     def play_all(self, *_):
         """Play the first result with the current results as the playlist."""
         if self.has_results:

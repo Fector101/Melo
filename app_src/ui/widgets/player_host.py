@@ -87,7 +87,8 @@ class PlayerHost(FloatLayout):
 
     def _on_current_screen(self, _manager, screen):
         self._screen = screen
-        self.visible = screen.name in PLAYER_SCREENS
+        if screen: # hot_reload patch
+            self.visible = screen.name in PLAYER_SCREENS
 
     def _on_screen_inset(self, _screen, value):
         self.inset_bottom = value

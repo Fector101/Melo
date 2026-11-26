@@ -1,6 +1,51 @@
 #:import dp kivy.metrics.dp
 #:import THEME ui.theme
 
+<SearchQueueBanner>:
+    opacity: 1 if root.playlist_from_search else 0
+    disabled: not root.playlist_from_search
+    spacing: dp(8)
+    padding: dp(10), 0
+    size_hint: 0 if root.playlist_from_search else 0,None
+    height: self.minimum_height if root.playlist_from_search else 0
+    width: self.minimum_width if root.playlist_from_search else 0
+    padding: [0,dp(7),0,0]
+    
+    BoxLayout:
+        spacing: dp(10)
+        padding: [dp(10), dp(5)]
+        size_hint:(None,None)
+        size: self.minimum_size
+        canvas.before:
+            Color:
+                rgba: THEME.TILE_BG
+            RoundedRectangle:
+                pos: self.pos
+                size: self.size
+                radius: [dp(10)]
+        Icon:
+            kind: "search"
+            color: THEME.ACCENT
+            size: dp(16), dp(16)
+            pos_hint: {"center_y": .4}
+        Label:
+            id: label
+            text: root.text
+            font_size: "13sp"
+            color: THEME.ACCENT
+            valign: "middle"
+            size_hint: (None, None)
+            size: self.texture_size
+            pos_hint: {"center_y":.5}
+
+    Label:
+        text: "Playing from search"
+        color: THEME.FG_DIM
+        size_hint: (None, None)
+        size: self.texture_size
+        pos_hint: {"center_y":.5}
+        font_size: "13sp"
+
 <LibraryScreen>:
     size_hint: [1,1]
     canvas.before:
@@ -17,40 +62,45 @@
             pos_hint: {"top":1}
             size_hint_y: None
             height: self.minimum_height
-            padding: dp(15), dp(30), dp(15), dp(10)
+            padding: dp(15), dp(10), dp(15), dp(10)
             spacing: dp(15)
             BoxLayout:
                 orientation:"vertical"
                 size_hint_y: None
                 height: self.minimum_height
-                spacing: dp(15)
                 Label:
                     text: "Your Library"
                     bold: True
                     font_size: "35sp"
                     halign: "left"
                     valign: "middle"
-                    text_size: self.size
+                    size_hint: (None, None)
+                    size: self.texture_size
+                    padding: [0,0,0,dp(5)]
                 Label:
                     id: status
                     font_size: "16sp"
-                    size_hint_y: None
-                    height: dp(34)
                     halign: "left"
                     valign: "middle"
-                    text_size: self.size
                     padding: dp(10), 0
                     text: root.status_text or "0 songs added"
+                    size_hint: (None, None)
+                    size: self.texture_size                
+                SearchQueueBanner:
+                    id: search_banner
+                    text: root.search_query
+                    playlist_from_search: bool(root.search_query)
+                    on_release: root.open_search_queue()
             BoxLayout:# search and future settings btn container
                 size_hint: [None,None]
                 size: self.minimum_size
-                pos_hint:{"center_y":.85}
+                pos_hint:{"center_y":.5}
                 TransportIcon:
                     kind: "search"
-                    size: dp(34), dp(34)
+                    size: dp(40), dp(40)
                     glyph_size: dp(24), dp(24)
                     on_release: setattr(root.manager,"current", "search")
-                
+
                 # Button:
                 #     text:"settings"
                 #     size_hint: [None,None]

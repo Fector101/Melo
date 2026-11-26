@@ -12,6 +12,12 @@ class PlayerRepository:
 
     def __init__(self):
         self.current_playlist = []
+        # playback_source can be library screen "library" or a search screen "search" query
+        self.playback_source = "library" # ["library", "search"]
+        
+        # playlist_query can be a search query "juice wrld" or in the future playlist_query can be the current playing album
+        self.playlist_query = ""
+
 
     # #: The track that is loaded (None when nothing is loaded).
     # current_track = ObjectProperty(None, allownone=True)

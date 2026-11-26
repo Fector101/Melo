@@ -43,6 +43,9 @@ class PlayerViewModel(EventDispatcher):
     #: Whether the user is dragging the seek bar (the ticker keeps quiet).
     is_seeking = BooleanProperty(False)
 
+    #: The search query that produced the current playlist, whichb will be displayed in library header.
+    playlist_query = StringProperty("")
+
     def __init__(self, playback_repository, library_view_model, player_repo, artwork_repository, **kwargs):
         """
         :param playback: the :class:`PlaybackRepository` to play through.
@@ -58,7 +61,8 @@ class PlayerViewModel(EventDispatcher):
         self._tick = None
         self._pending_seek = None
         self._last_pos = 0.0
-        
+        self.playlist_query = self._player_repo.playlist_query or ""
+
         self.bind(current_track=self._on_current_track)
 
         self._library_viewmodel.bind(tracks=self._on_tracks_changed)
@@ -92,6 +96,8 @@ class PlayerViewModel(EventDispatcher):
             # The library is the default playlist; a screen that wants a
             # narrower one sets it before calling play_track.
             self._player_repo.current_playlist = self._library_viewmodel.tracks
+            self._player_repo.playlist_query = ""
+            self.playlist_query = ""
             index = self._index_of(track)
         if index is None:
             return
@@ -218,6 +224,7 @@ class PlayerViewModel(EventDispatcher):
             return
         self.current_track = track  # -> the title, artist and cover
         self.duration = track.duration_seconds
+        self.playlist_query = self._player_repo.playlist_query or ""
         self.position = 0.0
         self._pending_seek = None
         self._last_pos = 0.0

@@ -151,6 +151,14 @@ class MeloScreenManager(ScreenManager):
         return SearchScreen(self.search_view_model, self.player_view_model,
                             library=self.library_view_model)
 
+    def open_search(self, query: str):
+        """Navigate to search screen with ``query`` already filled in and filtered."""
+        self.ensure_screen("search") # TODO remove before merge the action btn won't be visible is user never entered the search screen
+        screen = self.get_screen("search")
+        # TODO in next version set query after entering screen on_enter, i.e animation will be done and reduces chances on lag on a slower devices
+        screen.set_query(query)
+        self.current = "search"
+
     def _apply_insets_to_screens(self, *_):
         """Give every screen that pads itself the current window insets."""
         for screen in self.screens:
