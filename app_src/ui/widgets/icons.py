@@ -86,6 +86,8 @@ class Icon(Widget):
     #: the original size; only the widgets that set this are affected.
     glyph_scale = NumericProperty(1.0)
 
+    search_line_weight = NumericProperty(1.5)
+
     def __init__(self, **kw):
         super().__init__(**kw)
         self.bind(pos=self.draw, size=self.draw, kind=self.draw,
@@ -211,7 +213,7 @@ class Icon(Widget):
                           size=(stems[1] + sw - stems[0], bh))
 
             elif k == "search":
-                lw = dp(1.5)
+                lw = dp(self.search_line_weight)
                 cx, cy = x + w * .40, y + h * .62
                 radius = min(w, h) * .29
                 pts = []

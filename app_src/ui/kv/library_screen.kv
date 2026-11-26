@@ -12,7 +12,7 @@
     padding: [0,dp(7),0,0]
     
     BoxLayout:
-        spacing: dp(10)
+        spacing: dp(5)
         padding: [dp(10), dp(5)]
         size_hint:(None,None)
         size: self.minimum_size
@@ -22,12 +22,13 @@
             RoundedRectangle:
                 pos: self.pos
                 size: self.size
-                radius: [dp(10)]
+                radius: [dp(15)]
         Icon:
             kind: "search"
             color: THEME.ACCENT
             size: dp(16), dp(16)
             pos_hint: {"center_y": .4}
+            search_line_weight: 1
         Label:
             id: label
             text: root.text
