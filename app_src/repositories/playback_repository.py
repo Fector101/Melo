@@ -383,8 +383,6 @@ class PlaybackRepository:
                 logger.exception("error releasing notification: %s", error)
             self._notification = None
 
-    # def setNext_and_setPrev(self,next,prev)
-        
     # --- internals ----------------------------------------------------------
     def _handle_track_end(self):
         """The engine finished a track: tell the view model about it."""
