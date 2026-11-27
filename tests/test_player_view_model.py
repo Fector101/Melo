@@ -85,6 +85,16 @@ def test_next_and_previous_track(player, playback, tracks):
     assert playback.loaded == "/music/0.mp3"
 
 
+def test_can_next_tracks_the_playlist_boundary(player, tracks):
+    assert player.can_next is False
+
+    player.play_track(tracks[0])
+    assert player.can_next is True
+
+    player.play_track(tracks[-1])
+    assert player.can_next is False
+
+
 def test_notification_next_and_previous_play_audio_before_ui_refresh(
         player, playback, tracks, monkeypatch):
     scheduled = []

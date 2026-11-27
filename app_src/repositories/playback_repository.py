@@ -254,7 +254,7 @@ class KivySoundController:
 
     def get_length(self):
         """Length may only be known after the sound is loaded (no on_load)."""
-        if self._sound is not None and self._sound.length:
+        if self._sound is not None and self._sound.length and self.state == "play":
             self._length = float(self._sound.length)
         return self._length
 
@@ -383,6 +383,8 @@ class PlaybackRepository:
                 logger.exception("error releasing notification: %s", error)
             self._notification = None
 
+    # def setNext_and_setPrev(self,next,prev)
+        
     # --- internals ----------------------------------------------------------
     def _handle_track_end(self):
         """The engine finished a track: tell the view model about it."""

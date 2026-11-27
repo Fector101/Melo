@@ -56,6 +56,7 @@ class PlayerHost(FloatLayout):
                 art=self._on_state,
                 is_playing=self._on_state,
                 loop_enabled=self._on_state,
+                can_next=self._on_state,
                 duration=self._on_state,
                 current_track=self._on_state,
                 position=self._on_position,
@@ -72,6 +73,7 @@ class PlayerHost(FloatLayout):
         bar.art = vm.art
         bar.playing = vm.is_playing
         bar.loop_on = vm.loop_enabled
+        bar.next_enabled = vm.can_next
         bar.total = vm.duration
 
     def _on_position(self, _instance, value):

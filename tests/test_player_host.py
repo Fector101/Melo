@@ -103,9 +103,14 @@ def test_transport_buttons_drive_the_view_model(host, immediate_clock):
     view.manager.current_screen = InsetScreen(name="library")
     bar = view.player
 
+    assert bar.ids.next_button.disabled is True
     player_vm.play_track(library_vm.tracks[0])
+    assert bar.ids.next_button.disabled is False
     bar.ids.next_button.dispatch("on_release")
     assert player_vm.current_track is library_vm.tracks[1]
+
+    player_vm.play_track(library_vm.tracks[-1])
+    assert bar.ids.next_button.disabled is True
 
     bar.ids.play_button.dispatch("on_release")
     assert player_vm.is_playing is False
