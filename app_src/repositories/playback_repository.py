@@ -254,7 +254,7 @@ class KivySoundController:
 
     def get_length(self):
         """Length may only be known after the sound is loaded (no on_load)."""
-        if self._sound is not None and self._sound.length:
+        if self._sound is not None and self._sound.length and self.state == "play":
             self._length = float(self._sound.length)
         return self._length
 

@@ -62,16 +62,21 @@
                 kind: "prev"
                 size: dp(44), dp(44)
                 glyph_size: dp(16), dp(16)
+                color: [1,1,1,1] if not self.disabled else (.34, .34, .34, 1)
             TransportIcon:
                 id: play_button
                 kind: "play" if not root.playing else "pause"
                 size: dp(44), dp(44)
                 glyph_size: dp(16), dp(20)
+                color: [1,1,1,1] if not self.disabled else (.34, .34, .34, 1)
             TransportIcon:
                 id: next_button
                 kind: "next"
+                disabled: not root.next_enabled
                 size: dp(44), dp(44)
                 glyph_size: dp(16), dp(16)
+                color: [1,1,1,1] if not self.disabled else (.34, .34, .34, 1)
+
         TransportIcon:
             id: repeat_button
             kind: "repeat"

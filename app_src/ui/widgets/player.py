@@ -16,5 +16,6 @@ class Player(BoxLayout):
     art = StringProperty("")
     playing = BooleanProperty(False)
     loop_on = BooleanProperty(False)
+    next_enabled = BooleanProperty(False)
     position = NumericProperty(0)  # seconds
     total = NumericProperty(0)

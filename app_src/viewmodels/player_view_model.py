@@ -40,6 +40,9 @@ class PlayerViewModel(EventDispatcher):
     #: Whether the current track repeats.
     loop_enabled = BooleanProperty(False)
 
+    #: Whether another track follows the current one in the playlist.
+    can_next = BooleanProperty(False)
+
     #: Whether the user is dragging the seek bar (the ticker keeps quiet).
     is_seeking = BooleanProperty(False)
 
@@ -102,6 +105,7 @@ class PlayerViewModel(EventDispatcher):
         if index is None:
             return
         self._index = index
+        self._update_can_next()
         self._load_current()
 
     def toggle_play_pause(self):
@@ -133,6 +137,7 @@ class PlayerViewModel(EventDispatcher):
             return
         if self._index + 1 < len(tracks):
             self._index += 1
+            self._update_can_next()
             return self._load_current()
         return False # did'nt advance
         # else: end of list; loop-one repeats the player's track itself.
@@ -147,6 +152,7 @@ class PlayerViewModel(EventDispatcher):
             return
         if self._index > 0:
             self._index -= 1
+            self._update_can_next()
             self._load_current()
 
     def toggle_loop(self):
@@ -244,6 +250,7 @@ class PlayerViewModel(EventDispatcher):
     def _on_tracks_changed(self, _instance, _tracks):
         """A new scan replaced the library: the playlist starts over."""
         self._index = -1
+        self._update_can_next()
 
     def _art_for(self, path):
         """The cover of ``path`` when it is cached, else it is loaded async."""
@@ -330,6 +337,17 @@ class PlayerViewModel(EventDispatcher):
         self.stop_ticking()
         self._playback_repository.release()
 
+    def _update_can_next(self):
+        tracks = self._player_repo.current_playlist
+        can_go_to_a_next_track = self._index < len(tracks) - 1
+        next_track_function = self.next_track if can_go_to_a_next_track else None
+
+        self._playback_repository.set_transport_callbacks(on_next=next_track_function, on_previous=self.previous_track)
+        self._set_can_next_ui_value(can_go_to_a_next_track)
+
+    @mainthread
+    def _set_can_next_ui_value(self, value):
+        self.can_next = value
 
 def _should_prev_button_only_restart_playing_song(_playback_repository):
     """Helper to check if when previous btn is clicked, should player go to previous song or restart current song"""
