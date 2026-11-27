@@ -134,7 +134,7 @@ def attach_insets(root):
     global _insets_listener, _insets_register
 
     if not on_android_platform() or autoclass("android.os.Build$VERSION").SDK_INT < 35:
-        _apply_insets(root, read_insets(None)) # reseting placeholder values (68.1,94.1) not needed in android <15 envs
+        _apply_insets(root, read_insets(None)) # reseting to (0,0) not needed in android <15 envs
         return
     try:
         activity = get_python_activity_context()

@@ -6,9 +6,10 @@ creates or reparents it. The view-model bindings also happen once here instead
 of being repeated by every screen that wants a player bar.
 """
 
-from kivy.properties import (BooleanProperty, NumericProperty,
+from kivy.properties import (BooleanProperty, NumericProperty, StringProperty,
                              ObjectProperty)
 from kivy.uix.floatlayout import FloatLayout
+from kivy.metrics import dp
 
 from ui.theme import PLAYER_HEIGHT
 from ui.widgets.player import Player
@@ -21,18 +22,19 @@ class PlayerHost(FloatLayout):
     """Owns the one player bar and keeps it in sync with the player view model."""
 
     player = ObjectProperty(None)
-    inset_bottom = NumericProperty(94.1)
+    inset_bottom = NumericProperty(0)
     visible = BooleanProperty(True)
+    search_query = StringProperty("")
 
     def __init__(self, player_view_model, manager=None, **kwargs):
         super().__init__(**kwargs)
         self.view_model = player_view_model
         self.manager = manager
         self._screen = None
+        self.search_query_banner = None
 
         self.player = Player(size_hint=(1, None), height=PLAYER_HEIGHT)
         self.add_widget(self.player)
-
         self._bind_view_model()
         self._bind_widgets()
         self.bind(inset_bottom=self._place,
@@ -56,7 +58,9 @@ class PlayerHost(FloatLayout):
                 loop_enabled=self._on_state,
                 duration=self._on_state,
                 current_track=self._on_state,
-                position=self._on_position)
+                position=self._on_position,
+                playlist_query=self._show_search_query_banner
+        )
         self._on_state(vm, None)
         self._on_position(vm, vm.position)
 
@@ -103,5 +107,28 @@ class PlayerHost(FloatLayout):
         # the root at (0, 0).
         bar.pos = (0, y)
 
+    # SearchQueueBanner
+    def _update_status_bar_y(self,i,v):
+        self.search_query_banner.y=PLAYER_HEIGHT+self.search_query_banner.height + dp(10)
+        
+    def _show_search_query_banner(self,_,search_query):
+        self.search_query = search_query
+        if not self.search_query_banner:
+            from ui.widgets.SearchQueueBanner import SearchQueueBanner
+            self.search_query_banner = SearchQueueBanner(
+                text=search_query,
+                playlist_from_search=bool(self.search_query),
+                on_release=self.open_search_queue
+                )
+            self.add_widget(self.search_query_banner)
+            self.search_query_banner.bind(height=self._update_status_bar_y)
+            self._update_status_bar_y(0,0)
+
+        self.search_query_banner.playlist_from_search=bool(search_query)
+        self.search_query_banner.text=search_query
+    
+    def open_search_queue(self, *_):
+        """The header banner btn was tapped: reopen the query that made the queue."""
+        self.manager.open_search(self.search_query)
 
 __all__ = ("PLAYER_HEIGHT", "PLAYER_SCREENS", "PlayerHost")

@@ -1,0 +1,53 @@
+<SearchQueueBanner>:
+    opacity: 1 if root.playlist_from_search else 0
+    disabled: not root.playlist_from_search
+    spacing: dp(8)
+    size_hint: 1 if root.playlist_from_search else None,None
+    height: self.minimum_height if root.playlist_from_search else 0
+    width: self.minimum_width if root.playlist_from_search else 0
+    padding: [dp(5),dp(5),0,dp(5)]
+    # size_hint: None,None
+    # size: '200dp','200dp'
+    # height: 200
+    # y:THEME.PLAYER_HEIGHT +200
+    canvas.before:
+        Color:
+            rgba: THEME.BG#[1,0,0,1]
+        Rectangle:
+            pos: self.pos
+            size: self.size
+    BoxLayout:
+        spacing: dp(5)
+        padding: [dp(10), dp(5)]
+        size_hint:(None,None)
+        size: self.minimum_size
+        canvas.before:
+            Color:
+                rgba: THEME.TILE_BG
+            RoundedRectangle:
+                pos: self.pos
+                size: self.size
+                radius: [dp(15)]
+        Icon:
+            kind: "search"
+            color: THEME.ACCENT
+            size: dp(16), dp(16)
+            pos_hint: {"center_y": .4}
+            search_line_weight: 1
+        Label:
+            id: label
+            text: root.text
+            font_size: "13sp"
+            color: THEME.ACCENT
+            valign: "middle"
+            size_hint: (None, None)
+            size: self.texture_size
+            pos_hint: {"center_y":.5}
+
+    Label:
+        text: "Playing from search"
+        color: THEME.FG_DIM
+        size_hint: (None, None)
+        size: self.texture_size
+        pos_hint: {"center_y":.5}
+        font_size: "13sp"

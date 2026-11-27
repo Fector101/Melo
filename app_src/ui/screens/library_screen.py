@@ -1,20 +1,11 @@
 """The library screen: the list of tracks, the player and the scan button."""
 
-from kivy.properties import BooleanProperty, NumericProperty, StringProperty
-from kivy.clock import Clock
-from kivy.uix.behaviors import ButtonBehavior
-from kivy.uix.boxlayout import BoxLayout
+from kivy.properties import NumericProperty, StringProperty
 from kivy.uix.screenmanager import Screen
 
 from ui import load_kv, widgets  # noqa: F401  (importing registers the widgets)
 from ui.format import format_duration
 
-
-class SearchQueueBanner(ButtonBehavior, BoxLayout):
-    """The clickable header line that points back to a search queue."""
-
-    text = StringProperty("")
-    playlist_from_search = BooleanProperty(False)
 
 
 class LibraryScreen(Screen):
@@ -29,9 +20,6 @@ class LibraryScreen(Screen):
 
     #: The line under the heading.
     status_text = StringProperty("")
-
-    #: The queue query, when playback came from search ("" otherwise).
-    search_query = StringProperty("")
 
     def __init__(self, library, player, **kwargs):
         """
@@ -64,10 +52,8 @@ class LibraryScreen(Screen):
         library.bind(on_artwork_ready=self._on_artwork_ready)
 
         # The app-wide PlayerHost owns the player-widget bindings.
-        # This screen Only needs current_track for row highlighting and the queue query for
-        # the header banner.
-        self.player.bind(current_track=self._on_current_track, playlist_query=self._on_playlist_query)
-        self.search_query = self.player.playlist_query or ""
+        # This screen Only needs current_track for row highlighting
+        self.player.bind(current_track=self._on_current_track)
 
     def _bind_widgets(self):
         self.ids.fab.bind(on_release=self._on_scan)
@@ -132,14 +118,6 @@ class LibraryScreen(Screen):
                 changed = True
         if changed:
             self.ids.songs.refresh_from_data()
-
-    def _on_playlist_query(self, _instance, query):
-        """The playlist source changed: mirror it on the header banner."""
-        self.search_query = query or ""
-
-    def open_search_queue(self, *_):
-        """The header banner btn was tapped: reopen the query that made the queue."""
-        self.manager.open_search(self.search_query)
 
     # ------------------------------------------------------------------ #
     # The scan button (player controls live in the app-wide PlayerHost)   #

@@ -22,8 +22,8 @@ ScreenFactories = dict[str, ScreenFactory]
 class MeloScreenManager(ScreenManager):
     """A ``ScreenManager`` that builds its screens (and their view models)."""
 
-    inset_top = NumericProperty(68.1) # ".1" so when android returns whole value (screen listeners and player bar) notice a change in listeners
-    inset_bottom = NumericProperty(94.1)
+    inset_top = NumericProperty(0) # ".1" so when android returns whole value (screen listeners and player bar) notice a change in listeners
+    inset_bottom = NumericProperty(0)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

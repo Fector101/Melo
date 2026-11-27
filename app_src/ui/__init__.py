@@ -22,11 +22,8 @@ def load_kv_files():
             Builder.load_file(os.path.join(KV_DIR, name))
 
 
-def load_kv(name):
-    """Load one screen rule from ``ui/kv``.
-
-    The path is absolute: on Android the working directory is not the app
-    directory, so a relative path would not resolve. Screens call this from
-    their module so the update UI is never parsed at startup.
+def load_kv(*name):
+    """Loads any kv file
+    Accepts a list of folders and a file path
     """
-    Builder.load_file(os.path.join(SCREENS_KV_DIR, name))
+    Builder.load_file(os.path.join(SCREENS_KV_DIR, *name))
